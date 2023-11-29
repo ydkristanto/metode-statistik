@@ -201,7 +201,7 @@ $$
 \text{df} = n - 1
 $$ {#eq-df-uji-t}
 
-Dengan demikian, derajat bebasnya adalah $df = 25 - 1 = 24$. Distribusi sampling tersebut ditunjukkan pada @fig-dist-sampling-tkda.
+Dengan demikian, derajat bebasnya adalah $\text{df} = 25 - 1 = 24$. Distribusi sampling tersebut ditunjukkan pada @fig-dist-sampling-tkda.
 
 ```{r}
 #| label: fig-dist-sampling-tkda
@@ -435,7 +435,7 @@ Karena kita mendapatkan nilai-P kurang lebih sebesar `r round(uji_W_tkda[[3]], 3
 
 # Latihan
 
-Seorang peneliti merekrut sampel acak berukuran *n* = 40 orang untuk berpartisipasi dalam penelitian tentang intervensi depresi. Peneliti mengukur tingkat depresi peserta sebelum penelitian hasilnya tercatat dalam `sampel_depresi`. Berdasarkan data tersebut, peneliti tersebut mednuga bahwa skor depresi sampelnya lebih rendah dibandingkan skor depresi populasi 'normal', yaitu sebesar 4,0. Dengan menggunakan tingkat signifikansi $\alpha = \text{0,05}$, ujilah dugaan peneliti tersebut!
+Seorang peneliti merekrut sampel acak sederhana berukuran *n* = 40 orang untuk berpartisipasi dalam penelitian tentang intervensi depresi. Peneliti tersebut mengukur tingkat depresi peserta sebelum penelitian. Hasilnya tercatat dalam `sampel_depresi`. Berdasarkan data tersebut, peneliti tersebut menduga bahwa skor depresi sampelnya lebih rendah dibandingkan skor depresi populasi 'normal', yaitu sebesar 4,0. Dengan menggunakan tingkat signifikansi $\alpha = \text{0,05}$, ujilah dugaan peneliti tersebut!
 
 ```{r}
 #| label: sampel-depresi
