@@ -1,6 +1,0 @@
----
-title: "README"
-format: html
----
-
-Repositori ini untuk perkuliahan Metode Statistik dari Pendidikan Matematika Universitas Sanata Dharma.
