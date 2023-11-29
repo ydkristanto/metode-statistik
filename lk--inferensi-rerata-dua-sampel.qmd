@@ -1,0 +1,583 @@
+---
+title: "Inferensi untuk Rerata dari Dua Sampel"
+abstract: |
+  Artikel ini mendemonstrasikan bagaimana melakukan inferensi untuk rerata dari dua sampel, baik dari sampel-sampel berpasangan maupun tidak berpasangan.
+date: 2023/11/28
+author:
+  - name: Yosep Dwi Kristanto
+    url: https://people.usd.ac.id/~ydkristanto/
+    affiliation: Pendidikan Matematika, Universitas Sanata Dharma, Yogyakarta
+    affiliation-url: https://www.usd.ac.id/
+language: _language-id.yml
+type: webpage
+container-title: "Metode Statistik"
+format:
+  html:
+    toc: true
+    number-sections: true
+    keywords: "normalitas, selang kepercayaan, uji hipotesis, uji t, uji Wilcoxon"
+    page-layout: article
+    code-fold: true
+    code-tools: true
+    code-line-numbers: true
+    anchor-sections: true
+    smooth-scroll: true
+execute: 
+  echo: true
+  warning: false
+bibliography: references.bib
+csl: apa.csl
+google-scholar: true
+---
+
+```{r}
+#| label: pengaturan
+
+library(tidyverse)
+library(readr)
+library(knitr)
+library(kableExtra)
+library(ggpubr)
+```
+
+# Pertanyaan
+
+Pada bagian ini, kita akan menjawab dua pertanyaan terkait dengan bidang pendidikan berikut ini.
+
+-   Apakah indeks prestasi (IP) mahasiswa secara rata-rata naik dari semester pertama ke semester kedua?
+
+-   Apakah rerata motivasi belajar peserta didik yang mengikuti pembelajaran problem posing lebih tinggi daripada peserta didik yang mengikuti pembelajaran tradisional?
+
+Kedua pertanyaan tersebut sama-sama membandingkan dua data. Akan tetapi, jenis sampel yang digunakan untuk menjawab kedua pertanyaan tersebut berbeda. Pertanyaan pertama dijawab dengan menggunakan dua sampel yang berpasangan sedangkan pertanyaan kedua dijawab dengan dua sampel yang tidak berpasangan.
+
+Misalnya terkait dengan dua pertanyaan tersebut, seorang peneliti memiliki klaim seperti berikut.
+
+-   Indeks prestasi (IP) mahasiswa secara rata-rata naik dari semester pertama ke semester kedua.
+
+-   Rerata motivasi belajar peserta didik yang mengikuti pembelajaran problem posing lebih tinggi daripada peserta didik yang mengikuti pembelajaran tradisional.
+
+# Inferensi untuk Sampel-Sampel Berpasangan
+
+Untuk menjawab pertanyaan pertama, kita gunakan data `sampel_ip` yang merupakan sampel acak sederhana dan sampel-sampel berpasangan. Data sampel tersebut disajikan pada @tbl-sampel-ip.
+
+```{r}
+#| label: tbl-sampel-ip
+#| tbl-cap: Data `sampel_ip` yang memuat IP semester pertama dan kedua sepuluh mahasiswa.
+
+sampel_ip <- data.frame(
+  id = 1:10,
+  ip_smstr_1 = c(2.25, 2.4,
+                 2.6, 2.8,
+                 2.8, 2.9,
+                 3.15, 2.85,
+                 3.1, 3.5),
+  ip_smstr_2 = c(2.05, 2.95,
+                 2.25, 3.2,
+                 3.2, 2.95,
+                 3.25, 2.75,
+                 4, 2.96)
+)
+
+sampel_ip %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c("ID",
+                    "IP Semester I",
+                    "IP Semester II")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped",
+                                  "hold_position"), full_width = FALSE)
+```
+
+Data `sampel_ip` pada @tbl-sampel-ip dapat divisualisasikan seperti pada @fig-boxplot-pasangan-ip.
+
+```{r}
+#| label: fig-boxplot-pasangan-ip
+#| fig-cap: Boxplot IP mahasiswa di semester pertama dan kedua.
+#| fig-asp: 0.5625
+
+sampel_ip %>%
+  mutate("Semester I" = ip_smstr_1,
+         "Semester II" = ip_smstr_2) %>%
+  ggpaired(cond1 = "Semester I",
+           cond2 =  "Semester II",
+           color = "condition",
+           line.color = "gray",
+           line.size = 0.4,
+           xlab = FALSE,
+           ylab = "Indeks Prestasi",
+           ggtheme = theme_bw()) +
+  theme(legend.position = "none")
+
+```
+
+Untuk melihat dengan jelas apakah secara rata-rata ada peningkatan IP, kita dapat menghitung selisih IP setiap mahasiswa dari semester pertama ke semester kedua. Setelah penghitungan selisih tersebut, kita mendapatkan data seperti yang disajikan pada @tbl-selisih-ip.
+
+```{r}
+#| label: tbl-selisih-ip
+#| tbl-cap: Tabel data sampel IP mahasiswa setelah ditambahkan variabel `d`, yaitu selisih IP semester II dan I.
+
+sampel_d_ip <- sampel_ip %>%
+  mutate(d = ip_smstr_2 - ip_smstr_1)
+
+sampel_d_ip %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c("ID",
+                    "IP Semester I",
+                    "IP Semester II",
+                    "d")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped",
+                                  "hold_position"), full_width = FALSE)
+```
+
+Selanjutnya kita hitung rerata selisih IP setiap mahasiswa seperti berikut dan diperoleh hasilnya positif. Apakah secara rata-rata IP mahasiswa meningkat? Untuk menjawab ini, kita dapat menggunakan uji $t$ seperti pada rerata tunggal tetapi yang kita gunakan adalah variabel `d` dalam `sampel_d_ip`.
+
+```{r}
+rerata_d_ip <- mean(sampel_d_ip$d)
+sd_d_ip <- sd(sampel_d_ip$d)
+
+rerata_d_ip
+```
+
+## Uji Kondisi
+
+Karena kita menggunakan uji $t$ seperti pada inferensi rerata tunggal, kita perlu memeriksa apakah data sampel kita merupakan sampel acak sederhana dan berasal dari populasi yang berdistribusi normal.
+
+Seperti yang dinyatakan sebelumnya, sampel kita merupakan sampel acak sederhana. Selanjutnya kita perlu memeriksa normalitas populasinya. Kita dapat menggunakan diagram peluang normal seperti yang ditunjukkan pada @fig-diagram-qq-ip.
+
+```{r}
+#| label: fig-diagram-qq-ip
+#| fig-cap: Diagram peluang normal dengan selang kepercayaan 95% untuk variabel `d` dalam data `sampe_d_ip`.
+
+sampel_d_ip %>%
+  ggqqplot(x = "d",
+           conf.int.level = 0.95,
+           xlab = "Teoretis",
+           ylab = "Sampel",
+           ggtheme = theme_bw())
+```
+
+Berdasarkan inspeksi visual pada @fig-diagram-qq-ip kita dapat mengasumsikan bahwa data sampel kita berasal dari populasi yang berdistribusi normal. Dengan demikian, kita dapat menggunakan uji $t$.
+
+## Hipotesis Nol dan Alternatifnya
+
+Berdasarkan klaim pertama yang dinyatakan oleh peneliti di atas, hipotesis nol dan hipotesis alternatifnya adalah sebagai berikut.
+
+-   $H_0$: Tidak ada peningkatan IP mahasiswa dari semester pertama ke semester kedua. Dengan kata lain, $\mu_d = 0$.
+
+-   $H_A$: Terdapat peningkatan IP mahasiswa dari semester pertama ke semester kedua atau dapat disimbolkan dengan $\mu_d > 0$.
+
+Klaim peneliti tersebut terletak pada hipotesis alternatif sehingga data sampel kita dapat mendukungnya atau tidak cukup untuk mendukungnya.
+
+## Tingkat Signifikansi
+
+Kita pilih tingkat signifikansi $\alpha = \text{0,05}$ untuk melakukan uji hipotesis.
+
+## Variabilitas Statistik
+
+Statistik yang kita gunakan untuk melakukan uji hipotesis ini adalah $t$. Distribusi sampling statistik ini ditunjukkan pada distribusi $t$ dengan $\text{df} = 10 - 1 = 9$ seperti pada @fig-dist-sampling-ip.
+
+```{r}
+#| label: fig-dist-sampling-ip
+#| fig-cap: Distribusi sampling statistik $t$ untuk `d` dalam data `sampel_d_ip`.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
+  stat_function(fun = dt,
+                args = list(df = 9),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "t")
+```
+
+## Statistik Uji dan Nilai-P
+
+Sebelum menentukan nilai-P, kita tentukan terlebih dahulu statistik ujinya. Statistik uji tersebut dapat ditentukan dengan kode berikut.
+
+```{r}
+#| label: stat-uji-ip
+#| code-fold: false
+
+t_uji_ip <- (rerata_d_ip - 0) / (sd_d_ip/sqrt(10))
+t_uji_ip
+
+```
+
+Berdasarkan perhitungan tersebut, kita peroleh statistik ujinya bernilai kurang lebih `r round(t_uji_ip, 3)`. Karena uji hipotesis yang kita lakukan merupakan uji ekor kanan, maka nilai-P direpresentasikan sebagai luas daerah di kanan $t$ yang nilainya kurang lebih `r round(t_uji_ip, 3)`. Perhatikan @fig-nilai-P-ip.
+
+```{r}
+#| label: fig-nilai-P-ip
+#| fig-cap: Nilai-P yang digambarkan sebagai luas daerah di sebelah kanan statistik uji $t$.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
+  stat_function(fun = dt,
+                args = list(df = 9),
+                geom = "area",
+                xlim = c(t_uji_ip, 4),
+                fill = "red",
+                alpha = 0.6) +
+  annotate("segment", x = t_uji_ip, y = 0,
+           xend = t_uji_ip,
+           yend = dt(t_uji_ip, 9)) +
+  stat_function(fun = dt,
+                args = list(df = 9),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "t")
+```
+
+Berdasarkan gambar tersebut kita dapat melihat bahwa nilai-P tersebut bernilai cukup besar. Nilai-P tersebut dapat ditentukan dengan kode berikut.
+
+```{r}
+#| label: nilai-P-tkda
+#| code-fold: false
+
+P_ip <- pt(t_uji_ip,
+             df = 9,
+             lower.tail = FALSE)
+P_ip
+```
+
+## Kesimpulan dan Interpretasi
+
+Kita mendapatkan nilai-P yang nilainya sekitar `r round(P_ip, 3)` yang lebih dari 0,05. Dengan demikian kita gagal menolak hipotesis nol. Jadi, tidak cukup bukti untuk mendukung klaim yang menyatakan bahwa secara rata-rata terdapat peningkatan IP mahasiswa dari semester pertama ke semester kedua.
+
+# Uji Nonparametrik Alternatif
+
+Jika data sampel kita tidak berasal dari populasi yang berdistribusi normal, kita masih dapat menggunakan uji peringkat-bertanda Wilcoxon seperti berikut.
+
+```{r}
+#| label: uji-Wilcoxon-ip
+
+wilcox.test(sampel_d_ip$d,
+            mu = 0,
+            alternative = "greater")
+
+```
+
+Berdasarkan uji Wilcoxon tersebut kita juga mendapatkan nilai-P yang lebih dari 0,05 sehingga kita gagal menolak hipotesis nol.
+
+# Inferensi untuk Sampel-Sampel Tidak Berpasangan
+
+Pada bagian ini kita akan menguji klaim kedua peneliti tentang rerata motivasi belajar peserta didik yang mengikuti pembelajaran problem posing dan tradisional. Untuk melakukannya, kita gunakan data `sampel_pp` berikut. Data sampel tersebut diperoleh dari Christidamayani dan Kristanto [-@christidamayani2020].
+
+```{r}
+#| label: data-sampel-pp
+#| code-fold: false
+
+sampel_pp <- read_delim(
+  "https://people.usd.ac.id/~ydkristanto/metode-statistik/dataset/eksperimen-problem-posing.csv",
+  delim = ";",
+  escape_double = FALSE,
+  col_types = cols(kelompok = col_factor(
+    levels = c("tradisional",
+               "problem posing"))),
+  trim_ws = TRUE)
+
+head(sampel_pp)
+```
+
+Dari data tersebut, kita akan menggunakan variabel `motivasi_akhir` saja, yaitu ukuran yang menunjukkan seberapa besar motivasi belajar peserta didik setelah mereka mengikuti pembelajaran tradisional atau *problem posing*. Ringkasan variabel tersebut untuk setiap kelompoknya disajikan pada @tbl-ringkasan-sampel-pp.
+
+```{r}
+#| label: tbl-ringkasan-sampel-pp
+#| tbl-cap: Ringkasan variabel `motivasi akhir` dalam data `sampel_ma_pp`.
+
+sampel_ma_pp <- sampel_pp %>%
+  select(id, kelompok, motivasi_akhir)
+
+ringkas_ma_pp <- sampel_ma_pp %>%
+  dplyr::group_by(kelompok) %>%
+  summarise(rerata = mean(motivasi_akhir),
+            sd = sd(motivasi_akhir),
+            n = n())
+
+ringkas_ma_pp %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c("Kelompok",
+                    "Rerata",
+                    "Simpangan Baku",
+                    "n")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped",
+                                  "hold_position"), full_width = FALSE)
+```
+
+Untuk dapat melihat motivasi belajar peserta didik di kedua kelompok secara lebih jelas, kita dapat memvisualisasikannya seperti pada @fig-boxplot-motivasi-pp.
+
+```{r}
+#| label: fig-boxplot-motivasi-pp
+#| fig-cap: Boxplot dan diagram titik motivasi belajar peserta didik pada `kelompok` "tradisional dan "problem posing".
+#| fig-asp: 0.5625
+
+sampel_ma_pp %>%
+  ggboxplot(x = "kelompok",
+            y = "motivasi_akhir",
+            add = "dotplot",
+            color = "kelompok",
+            ggtheme = theme_bw(),
+            xlab = FALSE,
+            ylab = "Motivasi belajar") +
+  theme(legend.position = "none")
+
+```
+
+Berdasarkan @tbl-ringkasan-sampel-pp dan @fig-boxplot-motivasi-pp kita dapat melihat bahwa kelompok *problem posing* cenderung memiliki motivasi belajar yang lebih tinggi. Untuk mengetahui apakah karakteristik populasinya juga demikian, kita perlu melakukan uji hipotesis. Uji hipotesis yang dapat digunakan adalah uji $t$ untuk membandingkan rerata sampel-sampel yang tidak berpasangan.
+
+Terdapat dua macam uji $t$ yang mungkin dapat kita lakukan, yaitu uji $t$ yang mengasumsikan homogenitas variansi dan yang tidak (dengan perkiraan derajat bebas Welch) [selengkapnya baca @Kristanto2021b, pp. 17-24]. Kita akan memilih uji $t$ yang tidak mengasumsikan homogenitas variansi. Uji ini mempersyaratkan dua kondisi teknis berikut.
+
+-   **Bebas.** Setiap observasi dalam tiap-tiap sampel haruslah bebas. Hal ini dipenuhi ketika sampel-sampelnya merupakan sampel acak sederhana.
+
+-   **Normalitas.** Jika sampel-sampelnya kecil, sampel-sampel tersebut perlu berasal dari populasi yang berdistribusi normal. Syarat ini tidak berlaku ketika sampel-sampelnya besar.
+
+Untuk dapat menggunakan uji $t$ dengan perkiraan derajat bebas Welch, kita perlu memeriksa apakah data sampel kita memenuhi kondisi-kondisi tersebut.
+
+## Uji Kondisi
+
+Sampel-sampel yang kita miliki bukanlah sampel acak sederhana karena setiap observasinya (peserta didik) tidak dipilih secara acak per individu. Untuk kepentingan demonstrasi, kita abaikan persyaratan tersebut.
+
+Berikutnya kita perlu melihat apakah setiap sampel tersebut berasal dari populasi yang berdistribusi normal. Untuk melakukannya, kita dapat menggunakan diagram peluang normal seperti yang ditunjukkan pada @fig-QQ-pp.
+
+```{r}
+#| label: fig-QQ-pp
+#| fig-cap: Diagram peluang normal untuk variabel `motivasi_akhir` di setiap `kelompok`.
+#| fig-asp: 0.5625
+
+sampel_ma_pp %>%
+  ggqqplot(x = "motivasi_akhir",
+           color = "kelompok",
+           ggtheme = theme_bw(),
+           xlab = "Teoretis",
+           ylab = "Sampel") +
+  theme(legend.position = "bottom")
+```
+
+Berdasarkan @fig-QQ-pp kita dapat simpulkan bahwa `motivasi_akhir` untuk setiap `kelompok`-nya berasal dari populasi yang berdistribusi normal. Untuk itu, kita bisa lanjut menggunakan uji $t$.
+
+## Hipotesis Nol dan Alternatifnya
+
+Berdasarkan klaim yang dilakukan oleh peneliti di atas, kita dapat merumusukan hipotesis nol dan hipotesis alternatif sebagai berikut.
+
+-   $H_0$: Tidak ada perbedaan rerata motivasi belajar peserta didik di `kelompok` "tradisional" dan "problem posing". Hal ini disimbolkan dengan $\mu_1 = \mu_2$ atau $\mu_1 - \mu_2 = 0$.
+
+-   $H_A$: Rerata motivasi belajar peserta didik di `kelompok` "problem posing" lebih tinggi daripada "tradisional", yaitu $\mu_2 > \mu_1$ atau $\mu_1 - \mu_2 < 0$.
+
+Klaim awal peneliti terletak pada hipotesis alternatif sehingga data sampelnya dapat digunakan untuk mendukung klaim tersebut apabila diperoleh hasil yang signifikan. Lebih lanjut, karena hipotesis alternatifnya memuat tanda kurang dari maka uji hipotesis yang kita lakukan merupakan uji ekor kiri.
+
+## Tingkat Signifikansi
+
+Untuk melakukan uji hipotesis ini, kita pilih tingkat signifikansi $\alpha = \text{0,05}$.
+
+## Variabilitas Statistik
+
+Dalam uji hipotesis ini, kita menggunakan statistik $t$ yang setiap pasangan sampelnya dihitung dengan @eq-t-sampel-bebas.
+
+$$
+t = \frac{\left( \bar{x}_1 - \bar{x}_2 \right ) - \left( \mu_1 - \mu_2 \right )}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}}
+$$ {#eq-t-sampel-bebas}
+
+Distribusi $t$ tersebut memiliki derajat bebas yang dihitung dengan @eq-df-Welch.
+
+$$
+\text{df} = \frac{\left ( A + B \right )^2}{\frac{A^2}{n_1 - 1} + \frac{B^2}{n_2 - 1}}
+$$ {#eq-df-Welch}
+
+dengan $A = \frac{s_1^2}{n_1}$ dan $B = \frac{s_2^2}{n_2}$
+
+Berdasarkan persamaan tersebut, kita dapat menghitung derajat bebasnya seperti berikut.
+
+```{r}
+#| label: df-pp
+
+s1_ma_pp <- as.numeric(ringkas_ma_pp[1, "sd"])
+n1_ma_pp <- as.numeric(ringkas_ma_pp[1, "n"])
+s2_ma_pp <- as.numeric(ringkas_ma_pp[2, "sd"])
+n2_ma_pp <- as.numeric(ringkas_ma_pp[2, "n"])
+
+A_ma_pp <- s1_ma_pp^2 / n1_ma_pp
+B_ma_pp <- s2_ma_pp^2 / n2_ma_pp
+
+df_ma_pp <- (A_ma_pp + B_ma_pp)^2 / (A_ma_pp^2 / (n1_ma_pp - 1) + B_ma_pp^2 / (n2_ma_pp - 1))
+
+df_ma_pp
+
+```
+
+Berdasarkan perhitungan tersebut, kita mendapatkan derajat bebasnya sekitar `r round(df_ma_pp, 3)`. Dengan demikian, variabilitas statistik $t$ memiliki bentuk seperti yang ditunjukkan pada @fig-dist-sampling-pp.
+
+```{r}
+#| label: fig-dist-sampling-pp
+#| fig-cap: Distribusi sampling $t$ untuk variabel `motivasi_akhir` dalam data `sampel_ma_pp`.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
+  stat_function(fun = dt,
+                args = list(df = df_ma_pp),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "t")
+```
+
+## Statistik Uji dan Nilai-P
+
+Statistik uji $t$ untuk pasangan sampel yang kita miliki dapat dihitung dengan menggunakan @eq-t-sampel-bebas. Perhitungannya ditunjukkan seperti berikut.
+
+```{r}
+#| label: t-uji-pp
+
+M1_ma_pp <- as.numeric(ringkas_ma_pp[1, "rerata"])
+M2_ma_pp <- as.numeric(ringkas_ma_pp[2, "rerata"])
+
+t_uji_pp <- ((M1_ma_pp - M2_ma_pp) - 0) / sqrt(s1_ma_pp^2 / n1_ma_pp + s2_ma_pp^2 / n2_ma_pp)
+
+```
+
+Nilai-P uji hipotesis ini direpresentasikan sebagai luas daerah di sebelah kiri nilai $t$ yang kurang lebih `r round(t_uji_pp, 3)`. Daerah ini ditunjukkan pada @fig-nilai-P-pp.
+
+```{r}
+#| label: fig-nilai-P-pp
+#| fig-cap: Nilai-P yang digambarkan sebagai luas daerah di sebelah kanan statistik uji $t$.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
+  stat_function(fun = dt,
+                args = list(df = df_ma_pp),
+                geom = "area",
+                xlim = c(-4, t_uji_pp),
+                fill = "red",
+                alpha = 0.6) +
+  annotate("segment", x = t_uji_pp, y = 0,
+           xend = t_uji_pp,
+           yend = dt(t_uji_pp, df_ma_pp)) +
+  stat_function(fun = dt,
+                args = list(df = df_ma_pp),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "t")
+```
+
+Besarnya nilai-P tersebut dapat ditentukan dengan kode berikut.
+
+```{r}
+#| label: nilai-P-pp
+#| code-fold: false
+
+P_pp <- pt(t_uji_pp,
+             df = df_ma_pp,
+             lower.tail = TRUE)
+P_pp
+
+```
+
+## Kesimpulan dan Interpretasi
+
+Berdasarkan perhitungan sebelumnya diperoleh nilai-P sekitar `r round(P_pp, 3)` yang kurang dari tingkat signifikansinya, yaitu $\alpha = \text{0,05}$. Kita tolak hipotesis nol. Jadi, data sampel tersebut menjadi bukti yang cukup untuk mendukung klaim bahwa motivasi belajar peserta didik yang mengikuti pembelajaran problem posing lebih tinggi daripada yang mengikuti pembelajaran tradisional.
+
+# Uji Jumlah-Peringkat Wilcoxon
+
+Jika kondisi normalitas tidak terpenuhi, kita dapat menggunakan alternatif dari uji $t$ untuk sampel-sampel yang tidak berpasangan, yaitu uji jumlah-peringkat Wilcoxon. Untuk melakukannya, kita dapat menggunakan kode sebagai berikut.
+
+```{r}
+#| label: uji-Wilcoxon-pp
+#| code-fold: false
+
+wilcox.test(x = sampel_ma_pp[1:24, ]$motivasi_akhir,
+            y = sampel_ma_pp[25:44, ]$motivasi_akhir,
+            alternative = "less",
+            mu = 0,
+            paired = FALSE)
+
+```
+
+# Latihan
+
+1.  **Kebiasan Belajar.** Sebagai upaya untuk memperbaiki kebiasan belajar mahasiswa, sepuluh mahasiswa dipilih secara acak untuk menghadiri seminar mengenai pentingnya pendidikan. Data `sampel_wktu_bljr` yang ditunjukkan @tbl-data-sampel-waktu-belajar menunjukkan lamanya waktu (dalam jam) yang digunakan oleh mahasiswa-mahasiswa tersebut untuk belajar per minggunya sebelum dan setelah mengikuti seminar.
+
+    ```{r}
+    #| label: tbl-data-sampel-waktu-belajar
+    #| tbl-cap: Data `sampel_wktu_bljr` yang menunjukkan waktu belajar (dalam jam) sepuluh mahasiswa.
+
+    sampel_wktu_bljr <- data.frame(
+      id = 1:10,
+      sebelum = c(12.6, 4.3,
+                  4.6, 10.5,
+                  5.9, 10.5,
+                  11.5, 16.4,
+                  9.2, 12.9),
+      setelah = c(10.2, 6.9,
+                  11.7, 16.7,
+                  10.3, 9.7,
+                  9.7, 15.9,
+                  18.7, 24.4)
+    )
+
+    sampel_wktu_bljr %>%
+      kbl(linesep = "", booktabs = TRUE,
+          col.names = c("id",
+                        "sebelum",
+                        "setelah")
+        ) %>%
+      kable_styling(bootstrap_options = c("striped",
+                                          "condensed"), 
+                    latex_options = c("striped",
+                                      "hold_position"), full_width = FALSE)
+    ```
+
+    Pada tingkat signifikansi 0,05, apakah seminar tersebut efektif meningkatkan lamanya mahasiswa belajar tiap minggunya?
+
+2.  Sebuah tim peneliti dari Universitas Andalas [@desmawati2023] ingin mengetahui apakah pemberian makanan yang tinggi lemak dan kolesterol meningkatkan tingkat kolesterol dalam darah tikus yang sedang hamil. Untuk itu, mereka melakukan eksperimen terhadap 14 tikus wistar yang sedang hamil. Setengah sampel tersebut diberikan makan yang tinggi lemak dan kolesterol secara rutin sampai tikus-tikus tersebut melahirkanb(`kelompok` "eksperimen") dan setengahnya tidak (`kelompok` "kontrol"). Sampel-sampel tersebut merupakan sampel-sampel acak sederhana. Setelah melahirkan, tingkat kolesterol dalam darah tiap-tiap tikus tersebut diukur dan diperoleh data `sampel_kolesterol` yang disajikan pada @tbl-sampel-kolesterol.
+
+    ```{r}
+    #| label: tbl-sampel-kolesterol
+    #| tbl-cap: Tingkat kolesterol dalam darah (mg/dL) 14 tikus wistar dalam kelompok kontrol dan eksperimen.
+
+    sampel_kolesterol <- data.frame(
+      id = 1:14,
+      kelompok = c(rep("kontrol", 7),
+                   rep("eksperimen", 7)),
+      tingkat_kolesterol = c(75.9, 79.5,
+                             65.4, 106.2,
+                             71.7, 105.2,
+                             59.1, 158.2,
+                             137.7, 115.4,
+                             179.9, 162.5,
+                             116.9, 127.4)
+    )
+
+    sampel_kolesterol %>%
+      kbl(linesep = "", booktabs = TRUE,
+          col.names = c("id",
+                        "kelompok",
+                        "kolesterol")
+        ) %>%
+      kable_styling(bootstrap_options = c("striped",
+                                          "condensed"), 
+                    latex_options = c("striped",
+                                      "hold_position"), full_width = FALSE)
+    ```
+
+    Ujilah klaim yang menyatakan bahwa pemberian makanan yang tinggi lemak dan kolesterol meningkatkan tingkat kolesterol dalam darah tikus yang sedang hamil. Gunakan tingkat signifikansi $\alpha = \text{0,01}$.
+
+# Daftar Rujukan
+
+::: {#refs}
+:::

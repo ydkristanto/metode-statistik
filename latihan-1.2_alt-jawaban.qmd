@@ -1,0 +1,147 @@
+---
+title: "STAT503 Metode Statistik"
+subtitle: "Latihan-Latihan Landasan Inferensi"
+format:
+  pdf:
+    number-sections: true
+    papersize: a4
+    geometry: 
+      - top = 30mm
+      - left = 30mm
+      - bottom = 30mm
+      - right = 30mm
+crossref: 
+  fig-title: Gambar
+  fig-prefix: Gambar
+  tbl-title: Tabel
+  tbl-prefix: Tabel
+  sec-prefix: Bagian
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+library(knitr)
+library(infer)
+```
+
+![](https://images.unsplash.com/photo-1542810634-71277d95dcbb){fig-alt="Kredit untuk gambar ini diberikan kepada Yanis H dan Unsplash.com."}
+
+# Latihan 1.2
+
+**Calon pendidik Matematika.** Misalkan Anda ingin mengetahui berapa persen mahasiswa di program studi Pendidikan Matematika yang benar-benar bercita-cita menjadi pendidik Matematika. Untuk itu, Anda menyebarkan sebuah survei yang salah satu pertanyaannya seperti ini.
+
+> Apakah kamu berkeinginan untuk menjadi pendidik atau guru Matematika?
+
+Dari 20 mahasiswa di program studi tersebut yang Anda survei secara acak, 14 di antaranya menjawab "Ya". Buatlah sebuah selang untuk mengestimasi persentase seluruh mahasiswa di program studi tersebut yang ingin menjadi pendidik Matematika!
+
+------------------------------------------------------------------------
+
+Permasalahan yang diberikan akan diselesaikan dengan menggunakan beberapa tahapan. Tahapan-tahapan tersebut dipaparkan sebagai berikut.
+
+## Mengklarifikasi Pertanyaan
+
+Pertanyaan utama yang akan dijawab dalam pemecahan masalah statistik ini adalah sebagai berikut.
+
+> Berapakah persentase seluruh mahasiswa program studi Pendidikan Matematika yang berkeinginan menjadi pendidik Matematika?
+
+Pertanyaan tersebut mengarah pada proporsi populasi, yaitu $p$, yang dapat dijawab dengan menggunakan selang kepercayaan. Di dalam laporan ini, selang kepercayaan tersebut akan dibuat dengan menggunakan metode bootstrap.
+
+## Mempersiapkan dan Mengeksplorasi Data
+
+Untuk menjawab pertanyaan yang diberikan, informasi dari soal tentang data survei akan digunakan. Informasi tersebut menyatakan bahwa terdapat 20 mahasiswa yang disurvei secara acak dan 14 di antaranya menjawab "Ya", yaitu berkeinginan menjadi pendidik Matematika.
+
+Kode berikut ini digunakan untuk membuat sebuah data frame yang merefleksikan informasi tersebut.
+
+```{r}
+#| echo: true
+
+df_mhswPMat <- data.frame(
+  id = 1:20,
+  ingin_pendidikMat = c(rep("Ya", 14),
+                        rep("Tidak", 6))
+)
+```
+
+@tbl-data-mahasiswa-pend-mat menyajikan jawaban keduapuluh mahasiswa tersebut apakah mereka berkeinginan menjadi pendidik Matematika di masa mendatang.
+
+```{r}
+#| echo: true
+#| label: tbl-data-mahasiswa-pend-mat
+#| tbl-cap: Jawaban 20 mahasiswa apakah mereka ingin menjadi pendidik Matematika.
+
+kable(df_mhswPMat)
+```
+
+Visualisasi data tersebut disajikan oleh @fig-prop-pend-mat.
+
+```{r}
+#| echo: false
+#| label: fig-prop-pend-mat
+#| fig-cap: Visualisasi mahasiswa yang berkeinginan untuk menjadi pendidik Matematika dibandingkan keseluruhan.
+#| fig-asp: 0.5
+
+ggplot(df_mhswPMat,
+       aes(y = factor(1), fill = ingin_pendidikMat)) +
+  geom_bar() +
+  scale_fill_brewer(palette = "Dark2") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+
+## Memodelkan Variabilitas Statistik
+
+Metode bootstrap memungkinkan untuk melihat variabilitas proporsi dari satu sampel ke sampel lainnya. Berikut ini kode untuk membuat distribusi proporsi dari 10.000 sampel.
+
+```{r}
+#| echo: true
+
+dist_boot_pendMat <- df_mhswPMat %>%
+  specify(response = ingin_pendidikMat,
+          success = "Ya") %>%
+  generate(reps = 10000, type = "bootstrap") %>%
+  calculate(stat = "prop")
+```
+
+Distribusi proporsi 10.000 sampel bootstrap tersebut divisualisasikan oleh @fig-dist-boot-pend-mat.
+
+```{r}
+#| echo: true
+#| label: fig-dist-boot-pend-mat
+#| fig-cap: Distribusi proporsi 10.000 sampel bootstrap.
+
+visualise(dist_boot_pendMat)
+```
+
+## Membuat Selang Kepercayaan
+
+Distribusi proporsi 10.000 sampel bootstrap seperti yang disajikan pada @fig-dist-boot-pend-mat selanjutnya digunakan untuk membuat selang kepercayaan 95%. Untuk itu, tahapan berikutnya perlu menentukan proporsi sampel-sampel bootstrap yang berada di persentil 2,5 dan 97,5. Proporsi yang menjadi persentil-persentil ini ditunjukkan oleh @tbl-sk-pend-mat.
+
+```{r}
+#| echo: true
+#| label: tbl-sk-pend-mat
+#| tbl-cap: Nilai persentil 2,5 dan 97,5 sebagai ujung-ujung selang kepercayaan.
+
+sk_pendMat <- get_ci(dist_boot_pendMat,
+                     level = 0.95)
+kable(sk_pendMat)
+```
+
+Berdasarkan distribusi bootstrap pada @fig-dist-boot-pend-mat dan persentilnya yang ke-2,5 dan 97,5 (lihat @tbl-sk-pend-mat), proporsi sampel-sampel bootstrap yang terletak di antara kedua persentil tersebut disajikan pada @fig-sk-pend-mat.
+
+```{r}
+#| echo: true
+#| label: fig-sk-pend-mat
+#| fig-cap: Proporsi sampel-sampel bootstrap yang terletak di antara persentil ke-2,5 dan 97,5.
+
+visualise(dist_boot_pendMat) +
+  shade_confidence_interval(endpoints = sk_pendMat)
+
+```
+
+## Membuat Kesimpulan
+
+@fig-sk-pend-mat menunjukkan bahwa proporsi dari 95% sampel-sampel bootstrap terletak di antara `r sk_pendMat[1,1]` dan `r sk_pendMat[1,2]`. Jadi, kita cukup yakin bahwa persentase semua mahasiswa program studi Pendidikan Matematika yang berkeinginan menjadi pendidik Matematika nilainya berada di antara `r sk_pendMat[1,1]*100`% dan `r sk_pendMat[1,2]*100`%.

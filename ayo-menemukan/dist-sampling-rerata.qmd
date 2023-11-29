@@ -1,0 +1,339 @@
+---
+title: "Ayo Menemukan: Karakteristik Distribusi Sampling Rerata"
+format:
+  pdf:
+    number-sections: true
+    papersize: a4
+    geometry: 
+      - top = 30mm
+      - left = 30mm
+      - bottom = 30mm
+      - right = 30mm
+crossref: 
+  fig-title: Gambar
+  fig-prefix: Gambar
+  tbl-title: Tabel
+  tbl-prefix: Tabel
+  sec-prefix: Bagian
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(infer)
+
+```
+
+# Tujuan {#sec-tujuan}
+
+Setelah menyelesaikan aktivitas pembelajaran ini, Anda akan mampu mendeskripsikan karakteristik distribusi sampling rerata untuk semua sampel yang berukuran $n$ dari populasi dengan rerata $\mu$ dan simpangan baku $\sigma$. Selain itu, Anda akan membandingkan distribusi sampling tersebut dengan distribusi sampling yang diperoleh dengan hanya menggunakan data sampel.
+
+# Data dan Konteksnya
+
+Untuk mencapai tujuan pada @sec-tujuan, kita akan menggunakan data populasi dari `crimtab`, sebuah set data yang telah disediakan oleh R.
+
+Set data `crimtab` tersebut berisi data 3000 para kriminal berjenis kelamin laki-laki dan berusia di atas 20 tahun yang menjalani hukuman di penjara utama Inggris dan Wales.
+
+```{r}
+#| label: struktur-set-data-crimtab
+#| echo: true
+
+str(crimtab)
+sum(crimtab)
+```
+
+Format set data `crimtab` tersebut berupa sebuah tabel yang setiap selnya merupakan frekuensi. Tabel tersebut berdimensi $42 \times 22$ dengan frekuensi totalnya `sum(crimtab)` 3000.
+
+Judul baris-barisnya merepresentasikan titik tengah panjang jari para kriminal tersebut (dalam cm), sedangkan judul kolom-kolomnya merepresentasikan tinggi badannya (dalam cm). Misalnya, sel dalam baris `10.8` dan kolom `152.4` nilainya 5. Artinya, terdapat lima kriminal yang titik tengah jarinya sepanjang 10,8 cm dan tinggi badannya 152,4 cm.
+
+```{r}
+#| echo: true
+
+crimtab["10.8", "152.4"]
+
+```
+
+Dari set data tersebut, kita pilih variabel tinggi badan saja dan kita namai datanya dengan `tinggi_kriminal`. Kita jadikan data ini sebagai populasi.
+
+```{r}
+#| label: populasi-tinggi-badan-kriminal
+#| echo: true
+
+tinggi <- as.numeric(colnames(crimtab))
+tinggi_kriminal <- data.frame(
+  tinggi = rep(tinggi, colSums(crimtab))
+)
+head(tinggi_kriminal)
+
+```
+
+# Eksplorasi Data
+
+Di tahapan eksplorasi data ini, kita hitung rerata dan simpangan baku tinggi badan dari populasi tersebut.
+
+```{r}
+#| label: tbl-par-populasi-tinggi-badan-kriminal
+#| tbl-cap: Ringkasan parameter populasi tinggi badan kriminal.
+#| echo: true
+
+mu <- mean(tinggi_kriminal$tinggi)
+
+sigma <- sd(tinggi_kriminal$tinggi)*
+  sqrt((length(tinggi_kriminal$tinggi)-1)/
+         length(tinggi_kriminal$tinggi))
+
+ringkas_par <- data.frame(
+  "rerata" = mu,
+  "simpangan baku" = sigma
+)
+ringkas_par %>%
+  kbl(linesep = "", booktabs = T) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"))
+```
+
+Selanjutnya, kita gambarkan distribusi tinggi badan populasi tersebut dengan histogram yang disertai dengan kurva normal yang sesuai. Perhatikan @fig-histogram-tinggi-badan!
+
+```{r}
+#| label: fig-histogram-tinggi-badan
+#| fig-cap: Distribusi tinggi badan 3000 kriminal.
+#| fig-asp: 0.5
+
+ggplot(tinggi_kriminal, aes(x = tinggi)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 2.5,
+                 col = "white") +
+  stat_function(fun = dnorm,
+                args = list(mean = mu,
+                            sd = sigma),
+                linewidth = 1) +
+  labs(x = "Tinggi badan (cm)")
+```
+
+# Distribusi Sampling Rerata dari Sebuah Populasi
+
+Kalian akan mensimulasikan distribusi sampling untuk beberapa ukuran sampel $n$ tertentu. Pilihlah lima nilai $n$ yang lebih dari 5 dan masukkan nilainya ke dalam variabel `ukuran_sampel`.
+
+```{r}
+#| include: false
+
+ukuran_sampel = c(10, 17, 43, 50, 130)
+
+```
+
+Untuk setiap `ukuran_sampel`, kita akan melakukan simulasi pemilihan 1000 sampel dari populasinya dan kita hitung rerata setiap sampel tersebut.
+
+```{r}
+banyak_sampel <- 1000
+banyak_set_sampel <- length(ukuran_sampel)
+dist_rerata_sampel <- data.frame(
+  rerata = rep(NA, banyak_set_sampel*banyak_sampel),
+  ukuran = rep(NA, banyak_set_sampel*banyak_sampel)
+)
+
+for (j in 1:banyak_set_sampel) {
+  for (i in 1:banyak_sampel) {
+    dist_rerata_sampel[(j-1)*banyak_sampel + i,1] =
+      mean(sample(
+        tinggi_kriminal$tinggi,
+        ukuran_sampel[j],
+        replace = TRUE
+        ))
+    dist_rerata_sampel[(j-1)*banyak_sampel + i,2] =
+      ukuran_sampel[j]
+  }
+  }
+```
+
+Distribusi rerata untuk 1000 sampel di setiap kategori ukurannya ditunjukkan pada @fig-histo-dist-rerata-sampel.
+
+```{r}
+#| label: fig-histo-dist-rerata-sampel
+#| echo: false
+#| fig-cap: Distribusi rerata sampel di setiap kategori ukuran sampelnya.
+#| fig-asp: 0.5
+
+ggplot(dist_rerata_sampel,
+       aes(x = rerata)) +
+  geom_histogram(binwidth = 0.5,
+                 col = "white") +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  facet_grid(ukuran ~ .)
+```
+
+@tbl-ringkas-par-dist-rerata berikut menyajikan rerata dan galat standar ($SE$) untuk setiap distribusi sampling rerata hasil simulasinya. Carilah hubungan rerata dan galat standar tersebut dengan rerata dan simpangan baku populasi pada @tbl-par-populasi-tinggi-badan-kriminal.
+
+```{r}
+#| label: tbl-ringkas-par-dist-rerata
+#| warning: false
+#| tbl-cap: Rerata (mean) dan simpangan baku (SE) distribusi rerata sampel setiap ukurannya.
+
+ringkas_dist_rerata <- dist_rerata_sampel %>%
+  group_by(ukuran) %>%
+  summarise(M = round(mean(rerata), 2),
+            SE = round(sd(rerata), 3)) %>%
+  kbl() %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"))
+ringkas_dist_rerata
+```
+
+# Distribusi Sampling Rerata dari Sampel
+
+Sekarang, kita akan memilih sebuah sampel (dengan pengembalian) untuk setiap `ukuran_sampel` yang telah kita tentukan sebelumnya. Agar dapat diproduksi kembali, kita atur benih pengacakannya 503.
+
+```{r}
+#| label: pemilihan-sampel
+
+set.seed(503)
+
+ukuran_sampel_kum <- cumsum(ukuran_sampel)
+
+sampel_1 <- data.frame(
+  tinggi_badan = sample(tinggi_kriminal$tinggi,
+                   size = ukuran_sampel[1],
+                   replace = TRUE)
+)
+sampel_2 <- data.frame(
+  tinggi_badan = sample(tinggi_kriminal$tinggi,
+                   size = ukuran_sampel[2],
+                   replace = TRUE)
+)
+sampel_3 <- data.frame(
+  tinggi_badan = sample(tinggi_kriminal$tinggi,
+                   size = ukuran_sampel[3],
+                   replace = TRUE)
+)
+sampel_4 <- data.frame(
+  tinggi_badan = sample(tinggi_kriminal$tinggi,
+                   size = ukuran_sampel[4],
+                   replace = TRUE)
+)
+sampel_5 <- data.frame(
+  tinggi_badan = sample(tinggi_kriminal$tinggi,
+                   size = ukuran_sampel[5],
+                   replace = TRUE)
+)
+
+kumpulan_sampel <- rbind(sampel_1,
+                         sampel_2,
+                         sampel_3,
+                         sampel_4,
+                         sampel_5) %>%
+  mutate(sampel = c(rep(1, ukuran_sampel[1]),
+                    rep(2, ukuran_sampel[2]),
+                    rep(3, ukuran_sampel[3]),
+                    rep(4, ukuran_sampel[4]),
+                    rep(5, ukuran_sampel[5])))
+```
+
+@fig-histo-sampel-sampel menunjukkan distribusi tiap-tiap sampelnya.
+
+```{r}
+#| label: fig-histo-sampel-sampel
+#| fig-cap: Distribusi tiap-tiap sampel yang dipilih secara acak dari populasinya.
+
+ggplot(kumpulan_sampel, aes(x = tinggi_badan)) +
+  geom_histogram(binwidth = 2.5,
+                 col = "white") +
+  facet_grid(sampel ~ .)
+```
+
+Sekarang kita cermati distribusi sampling hasil simulasi berdasarkan tiap-tiap sampel tersebut. Kita lakukan simulasi sebanyak 1000 sampel.
+
+```{r}
+#| label: fig-kumpulan-dist-boot
+#| fig-cap: Distribusi sampling bootstrap dari tiap-tiap sampel.
+
+dist_boot_1 <- sampel_1 %>%
+  specify(response = tinggi_badan) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "mean") %>%
+  mutate(ukuran = nrow(sampel_1))
+dist_boot_2 <- sampel_2 %>%
+  specify(response = tinggi_badan) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "mean") %>%
+  mutate(ukuran = nrow(sampel_2))
+dist_boot_3 <- sampel_3 %>%
+  specify(response = tinggi_badan) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "mean") %>%
+  mutate(ukuran = nrow(sampel_3))
+dist_boot_4 <- sampel_4 %>%
+  specify(response = tinggi_badan) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "mean") %>%
+  mutate(ukuran = nrow(sampel_4))
+dist_boot_5 <- sampel_5 %>%
+  specify(response = tinggi_badan) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "mean") %>%
+  mutate(ukuran = nrow(sampel_5))
+
+kumpulan_dist_boot <- rbind(
+  dist_boot_1,
+  dist_boot_2,
+  dist_boot_3,
+  dist_boot_4,
+  dist_boot_5
+)
+
+kumpulan_dist_boot %>%
+  ggplot(aes(x = stat)) +
+  geom_histogram(binwidth = 0.5,
+                 col = "white") +
+  facet_grid(ukuran ~ .)
+```
+
+@tbl-ringkas-dist-boot berikut menunjukkan rerata dan simpangan baku ($SE$) dari tiap-tiap distribusi bootstrap hasil simulasi. Bandingkan tabel tersebut dengan @tbl-ringkas-par-dist-rerata.
+
+```{r}
+#| label: tbl-ringkas-dist-boot
+#| warning: false
+#| tbl-cap: Rerata (mean) dan simpangan baku (SE) distribusi bootstrap.
+
+ringkas_dist_boot <- kumpulan_dist_boot %>%
+  group_by(ukuran) %>%
+  summarise(M = round(mean(stat), 2),
+            SE = round(sd(stat), 3)) %>%
+  kbl() %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"))
+ringkas_dist_boot
+```
+
+Agar lebih mudah untuk membandingkan, perhatikan @fig-dist-sampling-populasi-sampel berikut!
+
+```{r}
+#| label: fig-dist-sampling-populasi-sampel
+#| fig-cap: Perbandingan distribusi-distribusi sampling hasil simulasi yang dibuat berdasarkan data populasi dan sampel.
+
+dist_rerata_sampel_tibble <- dist_rerata_sampel %>%
+  as_tibble() %>%
+  mutate(
+    asal = rep("populasi", 5000)
+  )
+
+kumpulan_dist_boot_tibble <- kumpulan_dist_boot %>%
+  mutate(
+    rerata = stat,
+    asal = rep("sampel", 5000)
+  ) %>%
+  select(rerata, ukuran, asal)
+
+dist_rerata_popsamp <- rbind(dist_rerata_sampel_tibble,
+                             kumpulan_dist_boot_tibble)
+
+dist_rerata_popsamp %>% ggplot(aes(x = rerata, fill = asal)) +
+  geom_histogram(position = "identity",
+                 alpha = 0.6,
+                 binwidth = 0.5) +
+  facet_grid(ukuran ~ .)
+```

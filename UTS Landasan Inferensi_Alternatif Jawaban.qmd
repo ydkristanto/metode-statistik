@@ -1,0 +1,119 @@
+---
+title: "STAT503 Metode Statistik"
+subtitle: "Ujian Tengah Semester (UTS): Landasan Inferensi"
+format:
+  pdf:
+    number-sections: true
+    papersize: a4
+    geometry: 
+      - top = 30mm
+      - left = 30mm
+      - bottom = 30mm
+      - right = 30mm
+crossref: 
+  fig-title: Gambar
+  fig-prefix: Gambar
+  tbl-title: Tabel
+  tbl-prefix: Tabel
+  sec-prefix: Bagian
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+library(knitr)
+library(infer)
+
+```
+
+# Soal: Video di Luar Ruangan
+
+Misalkan kalian ingin mengestimasi proporsi video-video Youtube yang pengambilan gambarnya (sebagian atau keseluruhan) dilakukan di luar ruangan. Kalian memilih sampel acak yang terdiri dari 154 video Youtube dan kalian memperoleh 45 video yang pengambilan gambarnya dilakukan di luar ruangan.
+
+Buatlah sebuah selang kepercayaan 95% untuk mengestimasi persentase video-video Youtube yang pengambilan gambarnya dilakukan di luar ruangan!
+
+------------------------------------------------------------------------
+
+# Jawaban
+
+Permasalahan yang diberikan akan diselesaikan melalui lima tahapan. Tahapan-tahapan tersebut dipaparkan sebagai berikut.
+
+## Mengklarifikasi Pertanyaan
+
+*\[Secara jelas tuliskan rumusan masalah/pertanyaan yang ingin Anda jawab dengan metode statistik!\]*
+
+## Mempersiapkan dan Mengeksplorasi Data
+
+*\[Buatlah data sampel yang sesuai dengan informasi dalam soal. Visualisasikan data tersebut.\]*
+
+```{r}
+#| label: data-sampel
+#| echo: false
+
+sampel_videoYt <- data.frame(
+  id = 1:154,
+  LuarRuangan = c(rep("Ya", 45),
+                  rep("Tidak", 109))
+)
+```
+
+```{r}
+#| label: fig-vis-video-yt
+#| echo: false
+#| fig-cap: Visualisasi rasio video-video Youtube yang pengambilan gambarnya di luar ruangan atau tidak.
+#| fig-asp: 0.5
+
+sampel_videoYt %>%
+  ggplot(aes(y = factor(1), fill = LuarRuangan)) +
+  geom_bar() +
+  theme(axis.title = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+
+## Memodelkan Variabilitas Statistik
+
+*\[Modelkan variabilitas statistik-statistiknya berdasarkan sampel yang dimiliki dengan menggunakan dua metode: (a) bootstrap, dan (b) kurva normal. Hasil dari dua metode tersebut kemudian dapat divisualisasikan pada satu bidang atau sendiri-sendiri.\]*
+
+```{r}
+#| label: dist-boot-yt-luar
+#| echo: false
+
+dist_boot_videoYt <- sampel_videoYt %>%
+  specify(response = LuarRuangan,
+          success = "Ya") %>%
+  generate(reps = 10000,
+           type = "bootstrap") %>%
+  calculate(stat = "prop")
+
+```
+
+```{r}
+#| label: fig-dist-boot-yt-luar
+#| fig-cap: Visualisasi distribusi sampling hasil simulasi bootstrap dan model matematis kurva normal
+#| fig-asp: 0.5
+
+mu <- 45/154
+SE <- sqrt(mu*(1-mu)/154)
+
+dist_boot_videoYt %>%
+  ggplot(aes(x = stat)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 0.02,
+                 col = "white") +
+  stat_function(fun = dnorm,
+                args = list(mean = mu, sd = SE),
+                linewidth = 1)
+
+```
+
+## Membuat Selang Kepercayaan
+
+*\[Berdasarkan variabilitas statistik yang diperoleh dari dua metode, buatlah selang kepercayaan 95% untuk tiap-tiap metode tersebut.\]*
+
+## Membuat Kesimpulan
+
+*\[Buatlah kesimpulan berdasarkan selang kepercayaan yang diperoleh dari tiap-tiap metode.\]*

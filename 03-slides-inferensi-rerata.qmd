@@ -1,0 +1,16 @@
+---
+title: "Inferensi untuk Rerata"
+format:
+  revealjs:
+    transition: fade
+    preview-links: true
+    logo: figs/logo-usd.png
+    footer: "STAT503 Metode Statistik"
+    controls: true
+    multiplex: true
+code-annotations: select
+bibliography: references.bib
+csl: apa.csl
+---
+
+## Apa yang Akan Kita Jawab?

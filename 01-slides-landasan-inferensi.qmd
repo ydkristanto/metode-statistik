@@ -1,0 +1,1479 @@
+---
+title: "Landasan Inferensi"
+title-slide-attributes: 
+  data-background-color: "#1f78b4"
+format:
+  revealjs:
+    transition: fade
+    preview-links: true
+    logo: figs/logo-usd.png
+    footer: "STAT503 Metode Statistik"
+    controls: true
+    multiplex: true
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(openintro)
+library(tidyverse)
+library(knitr)
+library(infer)
+library(kableExtra)
+library(scales)
+set.seed(503)
+```
+
+## Pengantar {background-image="figs/bg-awan.jpg"}
+
+Sempatkan diri Anda untuk mengamati awan-awan di atas Anda.
+
+[Menurut Anda,]{.fragment} [**bagaimana awan-awan tersebut terbentuk**?]{.fragment}
+
+## Bandingkan dengan Data {.smaller}
+
+::: panel-tabset
+## Data 1
+
+![](figs/awan-1.jpg)
+
+## Data 2
+
+![](figs/awan-2.jpg)
+
+## Data 3
+
+![](figs/awan-3.jpg)
+
+## Data 4
+
+![](figs/awan-4.jpg)
+:::
+
+## Pengantar Lanjutan {.smaller}
+
+::: panel-tabset
+## Asumsi
+
+Anda akan menyelidiki karakteristik suatu populasi. Anda mengasumsikan bahwa:
+
+> Persentase orang yang berjenis kelamin perempuan dari populasi tersebut adalah 50%.
+
+## Fakta Sampel
+
+Dari populasi tersebut, Anda mengumpulkan data sampel berukuran 20 secara acak dan diperoleh:
+
+> Sebesar 75% orangnya berjenis kelamin perempuan.
+
+Apa yang Anda pikirkan tentang asumsi awal Anda?
+
+## Peluang
+
+```{r}
+#| echo: false
+
+# Membuat data sampel
+sampel_jk <- c("Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Perempuan", "Laki-laki", "Laki-laki", "Laki-laki", "Laki-laki", "Laki-laki")
+df_sampel_jk <- data.frame(sampel_jk, stringsAsFactors = TRUE)
+colnames(df_sampel_jk) <- c("jenis_kelamin")
+
+# Menentukan proporsi sampel
+p_topi_jk <- df_sampel_jk %>%
+  specify(response = jenis_kelamin,
+          success = "Perempuan") %>%
+  calculate(stat = "prop")
+
+# Membuat distribusi nol dan visualisasinya
+dist_nol_jk <- df_sampel_jk %>%
+  specify(response = jenis_kelamin,
+          success = "Perempuan") %>%
+  hypothesise(null = "point", p = 0.5) %>%
+  generate(reps = 5000) %>%
+  calculate(stat = "prop")
+visualise(dist_nol_jk) +
+  labs(xlab(label = "Proporsi Perempuan"),
+       ylab(label = "Frekuensi")) +
+  shade_p_value(obs_stat = p_topi_jk, direction = "greater")
+nilai_P_jk <- dist_nol_jk %>%
+  get_p_value(obs_stat = p_topi_jk, direction = "greater")
+```
+
+## Kesimpulan
+
+Dengan melakukan simulasi pengambilan 5000 sampel acak berdasarkan asumsi awal Anda, ternyata sampel yang Anda peroleh merupakan kasus yang sangat langka. Kemungkinannya sebesar `r nilai_P_jk` Anda mendapatkan sampel tersebut atau sampel-sampel yang lebih ekstrem!
+
+Apa yang bisa kita simpulkan?
+:::
+
+## Aturan Kejadian Langka
+
+> Dengan sebuah asumsi tertentu, jika faktanya kita mendapatkan sebuah kejadian yang peluangnya sangat kecil terjadi (hampir mustahil), kita simpulkan bahwa asumsi terebut kemungkinan tidak benar.
+
+# Uji Hipotesis dengan Randomisasi
+
+Di bagian pertama ini, mari kita melakukan uji hipotesis dengan bantuan simulasi acak!
+
+## Pertanyaan
+
+Kita akan menjawab pertanyaan berikut.
+
+> Apakah konsumen mahasiswa selalu mempertimbangkan prinsip berikut: uang yang tidak dibelanjakan sekarang dapat dibelanjakan nanti?
+
+## Hipotesis Terhadap Pertanyaan
+
+Terhadap pertanyaan yang diajukan sebelumnya, hipotesis berikut dapat diajukan.
+
+> Mengingatkan mahasiswa bahwa mereka dapat menghemat uang untuk pembelian selanjutnya akan **mengurangi kemungkinan** mereka melakukan pembelian.
+
+[Bagaimana menguji hipotesis tersebut?]{.fragment} [Mari kita mengujinya dengan menggunakan data!]{.fragment}
+
+## Menjawab dengan Data
+
+Untuk menguji hipotesis yang telah diajukan, kita eksplorasi dan analisis ulang sebuah set data dari penelitian yang dilakukan oleh @frederick2009.
+
+Datanya adalah `opportunity_cost` yang dapat diperoleh dari package {openintro}.
+
+## Data dan Konteksnya {.smaller}
+
+Dalam penelitiannya @frederick2009, sejumlah 150 mahasiswa diberikan pertanyaan berikut ini.
+
+> Bayangkan Anda telah menabung sejumlah uang tambahan untuk melakukan beberapa pembelian, dan pada kunjungan terakhir Anda ke toko video, Anda menemukan diskon khusus untuk video baru. Video ini berisi aktor atau aktris favorit Anda, dan jenis film favorit Anda (seperti komedi, drama, thriller, dll.). Video khusus yang Anda pertimbangkan ini adalah video yang sudah lama Anda pikirkan untuk dibeli. Ini tersedia dengan harga jual khusus \$14,99. Apa yang akan Anda lakukan dalam situasi ini? Silakan lingkari salah satu pilihan di bawah ini.
+
+## Data dan Konteksnya (2)
+
+::: columns
+::: {.column width="50%"}
+Setengah dari 150 mahasiswa dipih menjadi kelompok kontrol (`control`) dan mendapatkan dua opsi berikut.
+
+> A.  Beli video menghibur ini.
+>
+> B.  Tidak membeli video menghibur ini.
+:::
+
+::: {.column width="50%"}
+Sejumlah 75 mahasiswa sisanya menjadi kelompok eksperimen (`treatment`) dan memperoleh opsi yang sedikit dimodifikasi (B):
+
+> A.  Beli video menghibur ini.
+>
+> B.  Tidak membeli video menghibur ini. Simpan \$14,99 untuk pembelian lainnya.
+:::
+:::
+
+------------------------------------------------------------------------
+
+Apakah **ada tidaknya pernyataan** "simpan \$14,99 untuk pembelian lainnya" mempengaruhi **keputusan mahasiswa** untuk membeli video?
+
+------------------------------------------------------------------------
+
+## Eksplorasi Data {#sec-eksplorasi-data-opp-cost .smaller}
+
+Kita cermati visualisasi dan ringkasan variabel-variabel `decision` setiap kelompoknya (`group`) dalam data sampel `opportunity_cost`.
+
+::: panel-tabset
+## Gambar
+
+```{r}
+#| echo: false
+#| label: fig-1.1
+#| fig-cap: Diagram batang bertumpuk yang memperlihatkan proporsi mahasiswa "buy video" dan "not buy video" di tiap-tiap kelompok.
+#| out-width: 100%
+#| fig-asp: 0.3
+
+# Membuat diagram batang bertumpuk dengan {ggplot2}
+ggplot(opportunity_cost,
+       aes(y = group, fill = decision)) +
+  geom_bar() +
+  scale_fill_brewer(palette = "Dark2")
+```
+
+## Tabel
+
+::: columns
+::: {.column width="50%"}
+``` r
+#' Menggunakan fungsi table() untuk membuat
+#' tabel ringkasan
+tabel_ringkas <- table(opportunity_cost)
+
+# Memperindah gaya tabelnya dengan kable()
+tabel_ringkas2 <- kable(tabel_ringkas,
+                        caption = "Ringkasan
+                        data
+                        `opportunity_cost`.")
+
+# Menampilkan hasil tabelnya
+tabel_ringkas2
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: tbl-ringkasan-dec-group-opp-cost
+#| tbl-cap: Ringkasan variabel-variabel `decision` di tiap-tiap kelompoknya (`group`).
+
+#' Menggunakan fungsi table() untuk membuat
+#' tabel ringkasan
+tabel_ringkas <- table(opportunity_cost)
+
+# Memperindah gaya tabelnya dengan kable()
+tabel_ringkas2 <- kable(tabel_ringkas, caption = "Ringkasan data `opportunity_cost`.")
+
+# Menampilkan hasil tabelnya
+tabel_ringkas2
+```
+:::
+:::
+
+## Struktur Data
+
+```{r}
+#| echo: true
+
+str(opportunity_cost)
+```
+:::
+
+## Eksplorasi Data (2)
+
+Apakah eksplorasi data sampel sebelumnya menunjukkan adanya pengaruh variabel `group` terhadap variabel `decision`?
+
+Untuk menjawabnya, kita tentukan statistik yang relevan (sebagai **titik estimasi** parameternya) dan kita selidiki bagaimana statistik tersebut **bervariasi** dari sampel ke sampel.
+
+## Titik Estimasi {#sec-titik-est-opp-cost .smaller}
+
+Kita definisikan sukses ketika mahasiswa mengambil keputusan (`decision`) untuk tidak membeli videonya, "not buy video".
+
+Kita hitung selisih proporsi suksesnya di kedua kelompok (`group`), yaitu eksperimen ("treatment") dan kontrol ("control"). Misalnya $T$ adalah kelompok eksperimen dan $C$ adalah kelompok kontrol:
+
+$$
+\widehat{p}_{T}-\widehat{p}_{C} = 0,453 - 0,253 = 0,2
+$$
+
+Selisih proporsi tersebut disebut dengan **statistik uji**.
+
+## Titik Estimasi (2) {.smaller}
+
+::: columns
+::: {.column width="50%"}
+Perhitungannya di R ditunjukkan seperti berikut.
+
+```{r}
+#| echo: true
+
+#' Menentukan banyak mahasiswa di kelompok
+#' "treatment" yang "not buy video"
+eks_sukses <- opportunity_cost %>%
+  filter(group == "treatment",
+         decision == "not buy video") %>%
+  nrow()
+
+#' Menentukan banyak mahasiswa di kelompok
+#' "control" yang "not buy video"
+ktrl_sukses <- opportunity_cost %>%
+  filter(group == "control",
+         decision == "not buy video") %>%
+  nrow()
+
+#' Menentukan proporsi di kelompok "treatment"
+p_eks <- eks_sukses /
+  nrow(filter(opportunity_cost,
+              group == "treatment"))
+
+#' Menentukan proporsi di kelompok "control"
+p_ktrl <- ktrl_sukses /
+  nrow(filter(opportunity_cost,
+              group == "control"))
+
+# Menentukan selisih proporsi dan menampilkannya
+p_stat <- p_eks - p_ktrl
+```
+:::
+
+::: {.column width="50%"}
+Hasil `p_eks`, `p_ktrl`, dan `p_stat` ditunjukkan sebagai berikut.
+
+```{r}
+#| echo: true
+
+p_eks
+```
+
+```{r}
+#| echo: true
+
+p_ktrl
+```
+
+```{r}
+#| echo: true
+
+p_stat
+```
+:::
+:::
+
+## Hipotesis Nol dan Alternatif {.smaller}
+
+-   $H_{0}$: **Hipotesis nol.** Variabel-variabel `group` (ada tidaknya pertanyaan tambahan) dan `decision` (keputusan pembelian) saling bebas. Upaya mengingatkan mahasiswa bahwa mereka dapat menghemat uang untuk pembelian selanjutnya tidak berdampak terhadap keputusan pembelian mereka. Perbedaan yang teramati dari proporsinya, 20%, disebabkan oleh variabilitas alami yang melekat pada populasi.
+
+-   $H_{A}$: **Hipotesis alternatif.** Variabel-variabel `group` dan `decision` *tidak* saling bebas. Perbedaan sebesar 20% dalam proporsinya bukan karena variabilitas alami, dan upaya mengingatkan mahasiswa akan mengurangi kemungkinan mereka untuk melanjutkan pembelian.
+
+## Variabilitas Statistik
+
+![Simulasi pengambilan satu sampel secara acak dengan mengasumsikan hipotesis nol benar.](figs/randomisasi.png){#fig-1.2}
+
+## Variabilitas Statistik (2)
+
+Berikut ini adalah selisih proporsi dalam sampel hasil simulasi sebelumnya.
+
+$$
+\widehat{p}_{T,acak1}-\widehat{p}_{C,acak1} = \frac{28}{75}-\frac{25}{75} = 0,04
+$$
+
+## Simulasi dengan CODAP
+
+Lakukan simulasi dengan langkah-langkah berikut.
+
+1.  Kunjungi <https://s.id/MetStat01-Simulasi-Pembelian> dan simulasikan agar mendapat 100 sampel.
+
+2.  Carilah selisih proporsi kelompok eksperimen dan kontrol setiap sampelnya. Visualisasikan hasilnya.
+
+3.  Berdasarkan simulasi tersebut, nilailah hipotesis nol dan alternatifnya.
+
+## Simulasi dengan R {.smaller}
+
+::: columns
+::: {.column width="60%"}
+Berikut ini kode untuk mensimulasikan 10.000 sampel dan menentukan selisih proporsinya di tiap-tiap sampel. Hasil untuk beberapa sampel acak pertamanya ditunjukkan pada @tbl-1.2.
+
+```{r}
+#| echo: true
+
+# Membuat data di bawah asumsi hipotesis nolnya
+dist_nol <- opportunity_cost %>%
+  specify(decision ~ group,
+          success = "not buy video") %>%
+  hypothesize(null = "independence") %>%
+  
+  # Membuat 10000 sampel hasil permutasi
+  generate(reps = 10000, type = "permute") %>%
+  
+  # Menghitung selisih proporsi setiap sampelnya
+  calculate(stat = "diff in props",
+            order = c("treatment", "control"))
+```
+:::
+
+::: {.column width="40%"}
+```{r}
+#| echo: false
+#| label: tbl-1.2
+#| tbl-cap: Selisih proporsi dari beberapa hasil permutasi pertama.
+
+# Menampilkan beberapa baris pertama dari dist_nol
+dist_nol_kepala <- head(dist_nol)
+
+# Memperindah tampilan tabelnya dengan kable()
+kable(dist_nol_kepala) %>%
+  kable_styling(full_width = TRUE)
+
+```
+:::
+:::
+
+## Distribusi Nol
+
+Distribusi selisih proporsi 10000 sampelnya ditunjukkan seperti berikut.
+
+```{r}
+#| echo: false
+#| label: fig-1.3
+#| fig-cap: Distribusi selisih proporsi dari 10000 sampel hasil permutasi.
+
+#' Memvisualisasikan distribusi statistik
+#' dari semua data hasil permutasi
+visualise(dist_nol)
+```
+
+## Statistik Uji dan Distribusi Nol
+
+Posisi statistik uji terhadap distribusi nolnya ditunjukkan pada gambar berikut.
+
+```{r}
+#| echo: false
+#| label: fig-1.4
+#| fig-cap: Posisi statistik uji terhadap distribusi nolnya.
+
+#' Memvisualisasikan posisi statistik uji dan
+#' titik-titik lain yang lebih ekstrem
+visualize(dist_nol) +
+  shade_p_value(obs_stat = p_stat,
+                direction = "greater")
+```
+
+## Nilai-P {.smaller}
+
+::: columns
+::: {.column width="50%"}
+Dengan mengasumsikan hipotesis nolnya benar, berapakah peluang kita memperoleh sampel seperti `opportunity_cost` atau yang lebih ekstrim?
+
+```{r}
+#| include: false
+
+# Menentukan nilai-P
+nilai_P <- dist_nol %>%
+  get_p_value(obs_stat = p_stat,
+              direction = "greater")
+```
+
+Peluang inilah yang disebut dengan **nilai-P**. Perhitungan di samping menghasilkan nilai-P sebesar `r nilai_P[1,1]`.
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: true
+
+# Menentukan nilai-P
+nilai_P <- dist_nol %>%
+  get_p_value(obs_stat = p_stat,
+              direction = "greater")
+nilai_P
+```
+:::
+:::
+
+## Kesimpulan dan Interpretasi
+
+Di bawah hipotesis nol, kita mendapatkan selisih proporsi yang lebih dari atau sama dengan `r p_stat*100`% sebanyak `r nilai_P[1,1] * 100`%. Hal yang sangat langka!
+
+Dengan demikian, kita tolak hipotesis nol dan kita simpulkan bahwa upaya mengingatkan mahasiswa bahwa mereka dapat menghemat uang untuk pembelian selanjutnya akan mengurangi kemungkinan mereka melakukan pembelian.
+
+## Rangkuman
+
+Berdasarkan apa yang telah kita lakukan sebelumnya, prosedur uji randomisasi dilakukan dengan tahapan-tahapan berikut.
+
+1.  Menentukan $H_{0}$ dan $H_{A}$.
+
+2.  Mengumpulkan/menggunakan data dan menghitung statistik ujinya.
+
+3.  Mempermutasikan data secara berulang dan menghitung statistiknya.
+
+4.  Menentukan nilai-P.
+
+5.  Membuat kesimpulan dan interpretasi.
+
+## Latihan 1.1 {.smaller}
+
+**Transplantasi jantung.** Studi Transplantasi Jantung Universitas Stanford [@turnbull1974] dilakukan untuk menentukan apakah program transplantasi jantung eksperimental mereka dapat memperpanjang umur pasien. Setiap pasien yang mengikuti program ini ditetapkan sebagai kandidat resmi transplantasi jantung, yang berarti bahwa mereka sakit parah dan kemungkinan besar akan mendapat manfaat dari jantung baru. Beberapa pasien mendapat transplantasi dan beberapa tidak. Variabel `transplant` menunjukkan kelompok pasien: pasien dalam kelompok "treatment" mendapat transplantasi dan pasien dalam kelompok "control" tidak. Dari 34 pasien pada kelompok "control", 30 orang meninggal. Dari 69 orang dalam kelompok "treatment", 45 orang meninggal. Variabel `survived` digunakan untuk menunjukkan apakah pasien masih hidup pada akhir penelitian.[^1]
+
+[^1]: Latihan 1.1 ini menggunakan set data `heart_transplant` yang merupakan bagian dalam paket {openintro}.
+
+Dengan menggunakan uji randomisasi, tentukan apakah transplantasi jantung tersebut efektif!
+
+```{r}
+#| include: false
+
+dist_nol_htransp <- heart_transplant %>%
+  specify(survived ~ transplant,
+          success = "alive") %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 10000, type = "permute") %>%
+  calculate(stat = "diff in props",
+            order = c("treatment", "control"))
+
+```
+
+# Selang Kepercayaan dengan Bootstrap {#sec-sk-bootstrap}
+
+Fokus bagian kedua ini adalah mengestimasi nilai paramater sebuah populasi dengan menggunakan selang kepercayaan.
+
+## Kilas Balik
+
+Uji randomisasi yang telah kita lakukan sebelumnya digunakan untuk menguji sebuah klaim; menjawab sebuah pertanyaan yang jawabannya ya atau tidak.
+
+-   Apakah konsumen mahasiswa selalu mempertimbangkan prinsip berikut: uang yang tidak dibelanjakan sekarang dapat dibelanjakan nanti?
+
+-   Apakah program transplantasi jantung efektif untuk memperpanjang umur pasien?
+
+## Selang Kepercayaan
+
+Berbeda dengan uji randomisasi yang tujuannya menguji sebuah klaim, **selang kepercayaan** bertujuan untuk mengestimasi nilai yang tidak diketahui dari parameter sebuah populasi.
+
+-   Seberapa kecil kemungkinan saya tertular COVID-19 jika saya telah tervaksinasi?
+
+-   Berapakah persentase penduduk Indonesia yang masih buta aksara?
+
+## Studi Kasus: Penduduk Buta Aksara {#sec-sk-buta-aksara}
+
+Sekelompok peneliti melakukan survei secara acak terhadap 50 penduduk berusia 15 tahun ke atas dari Provinsi Nusa Tenggara Barat (NTB). Dari surveinya, mereka menemukan 5 orang (`r 5/50*100`%) buta aksara [diadaptasi dari @agustina2022, p. 166].
+
+Dengan menggunakan sampel tersebut, bagaimana **mengestimasi proporsi seluruh penduduk NTB berusia 15 tahun ke atas yang masih buta aksara**?
+
+## Estimasi Parameter Sebuah Populasi
+
+-   Kita akan menggunakan sebuah metode simulasi: **bootstraping**.
+
+-   Metode itu akan memodelkan **variabilitas sebuah statistik** dari satu sampel ke sampel lainnya yang diambil dari sebuah populasi.
+
+-   Model tersebut akan kita gunakan untuk membuat sebuah **estimasi selang** dari parameter populasi tersebut.
+
+## Cara Kerja Metode Bootstrap {.smaller}
+
+::: panel-tabset
+## Secara Intuitif
+
+![](figs/bootstrap-intuitif-01.png)
+
+## Dalam Praktik
+
+![](figs/bootstrap-dalam-praktik-02.png)
+:::
+
+## Simulasi Bootstrap dengan CODAP
+
+Lakukan simulasi bootstrap dengan CODAP melalui langkah-langkah berikut.
+
+-   Kunjungi <https://s.id/MetStat01-Boot-Literasi>. Simulasikan pengambilan 100 sampel secara acak tanpa pengembalian.
+
+-   Hitunglah proporsi mendapatkan penduduk buta aksara setiap sampelnya.
+
+-   Visualisasikan distribusi proporsi semua sampel tersebut. Apa yang dapat Anda amati?
+
+## Simulasi Bootstrap dengan R {.smaller}
+
+::: columns
+::: {.column width="60%"}
+Berikut ini kode untuk membuat distribusi 10.000 sampel bootstrap dengan R. Beberapa sampel pertamanya ditunjukkan dalam @tbl-kepala-dist-bootstrap-literasi-ntb.
+
+```{r}
+#| echo: true
+
+# Membuat sebuah data frame
+df_literasiNTB <- data.frame(
+  status_literasi = c(rep("Melek aksara", 45),
+                      rep("Buta aksara", 5))
+)
+
+# Membuat distribusi bootstrap
+dist_boot_literasiNTB <- df_literasiNTB %>%
+  specify(response = status_literasi,
+          success = "Buta aksara") %>%
+  generate(reps = 10000, type = "bootstrap") %>%
+  calculate(stat = "prop")
+```
+:::
+
+::: {.column width="40%"}
+```{r}
+#| label: tbl-kepala-dist-bootstrap-literasi-ntb
+#| echo: false
+#| tbl-cap: Proporsi penduduk NTB di 15 tahun ke atas yang buta aksara untuk beberapa sampel bootstrap.
+
+head(dist_boot_literasiNTB) %>%
+  kable()
+
+```
+:::
+:::
+
+## Distribusi Proporsi 10.000 Sampel Bootstrap
+
+```{r}
+#| echo: false
+#| label: fig-dist-boot-literasi-ntb
+#| fig-cap: Distribusi proporsi penduduk NTB berusia 15 tahun ke atas yang buta aksara dalam 10.000 sampel bootstrap.
+
+visualise(dist_boot_literasiNTB)
+
+```
+
+## Selang Kepercayaan Persentil Bootstrap
+
+```{r}
+#| echo: false
+#| label: fig-selang-kepercayaan-boot-prop-buta-aksara-ntb
+#| fig-cap: Selang kepercayaan persentil bootstrap untuk proporsi penduduk NTB 15 tahun ke atas yang buta aksara. Daerah yang diarsir memuat 95% proporsi dari semua sampel bootstrap.
+
+sk_literasiNTB <- get_ci(dist_boot_literasiNTB,
+                         level = 0.95)
+visualise(dist_boot_literasiNTB) +
+  shade_confidence_interval(endpoints = sk_literasiNTB)
+
+```
+
+## Kesimpulan
+
+@fig-selang-kepercayaan-boot-prop-buta-aksara-ntb menunjukkan bahwa 95% proporsi dari semua sampel berada di antara `r sk_literasiNTB[1, 1]` sampai `r sk_literasiNTB[1, 2]`. Dengan demikian, variabilitas proporsi yang ditunjukkan gambar tersebut membuat kita yakin bahwa persentase sebenarnya dari penduduk NTB usia 15 tahun ke atas yang buta aksara (parameter, $p$) nilainya di antara `r sk_literasiNTB[1, 1]*100`% dan `r sk_literasiNTB[1, 2]*100` %.
+
+## Rangkuman
+
+Ringkasnya, proses bootstrap dapat dilakukan melalui prosedur sebagai berikut.
+
+1.  Mengaitkan pertanyaan yang diberikan dengan parameter populasi yang akan diestimasi.
+
+2.  Mengumpulkan/menggunakan data.
+
+3.  Memodelkan variabilitas statistik.
+
+4.  Membuat sebuah selang estimasi.
+
+5.  Membuat kesimpulan.
+
+## Latihan 1.2 {#sec-latihan-1.2 .smaller}
+
+**Calon pendidik Matematika.** Misalkan Anda ingin mengetahui berapa persen mahasiswa di program studi Pendidikan Matematika yang benar-benar bercita-cita menjadi pendidik Matematika. Untuk itu, Anda menyebarkan sebuah survei yang salah satu pertanyaannya seperti ini.
+
+> Apakah kamu berkeinginan untuk menjadi pendidik atau guru Matematika?
+
+Dari 20 mahasiswa di program studi tersebut yang Anda survei secara acak, 14 di antaranya menjawab "Ya". Buatlah sebuah selang untuk mengestimasi persentase seluruh mahasiswa di program studi tersebut yang ingin menjadi pendidik Matematika!
+
+# Inferensi dengan Model Matematis
+
+Di bagian ketiga ini, kita akan melihat bagaimana menggunakan model matematis untuk melakukan inferensi terhadap populasi.
+
+## Kilas Balik
+
+Masih ingatkan dengan dua distribusi ini? [Apa yang Anda amati?]{.fragment} [Anda bertanya-tanya tentang apa?]{.fragment}
+
+::: columns
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-ilustrasi-dist-sampling-opp-cost
+#| fig-cap: Distribusi statistik (selisih proporsi) dari 10.000 sampel dalam studi kasus keputusan pembelian mahasiswa.
+
+visualise(dist_nol)
+
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-ilustrasi-dist-sampling-literasi-ntb
+#| fig-cap: Distribusi statistik (proporsi) dari 10.000 sampel dalam studi kasus penduduk buta aksara.
+
+visualise(dist_boot_literasiNTB)
+
+```
+:::
+:::
+
+## Distribusi Sampling
+
+::: {.callout-important appearance="minimal"}
+**Distribusi sampling dari suatu statistik** adalah distribusi semua nilai dari statistik tersebut ketika semua kemungkinan sampel berukuran *n* diambil dari populasi yang sama [@Kristanto2021a].
+:::
+
+## Distribusi Data vs Distribusi Sampling
+
+::: columns
+::: {.column width="50%"}
+```{r}
+#| label: fig-dist-data-tinggi
+#| echo: false
+#| fig-cap: Distribusi data tinggi badan remaja berusia 18 tahun dari sampel berukuran 20.
+
+tinggi_18thn <- data.frame(
+  tinggi = rnorm(20, mean = 173, sd = 5))
+ggplot(tinggi_18thn,
+       aes(x = tinggi)) +
+  geom_histogram(aes(y = ..density..),
+                 binwidth = 1,
+                 color = "white") +
+  xlim(158, 188)
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-dist-sampling-tinggi
+#| fig-cap: Distribusi sampling tinggi badan dari populasi remaja berusia 18 tahun dengan rerata 173 cm dan simpangan baku 5.
+
+ds_tinggi_18thn <- data.frame(
+  rerata = c(rep(169,1),
+             rep(170,10),
+             rep(171,72),
+             rep(172,239),
+             rep(173,357),
+             rep(174,239),
+             rep(175,72),
+             rep(176,10),
+             rep(177,1))
+)
+ggplot(ds_tinggi_18thn, aes(x = rerata)) +
+  geom_histogram(aes(y = ..density..),
+                 binwidth = 1,
+                 color = "white") +
+  xlim(158, 188)
+```
+:::
+:::
+
+## Teorema Limit Pusat untuk Proporsi
+
+::: {.callout-important appearance="minimal"}
+Jika memenuhi kondisi-kondisi tertentu, distribusi sampling untuk proporsi memiliki bentuk yang menyerupai kurva lonceng. Kurva seperti ini disebut dengan *distribusi normal*.
+:::
+
+## Distribusi Sampling dan Distribusi Normal
+
+::: columns
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-dist-sim-teori-opp-cost
+#| fig-cap: Distribusi statistik hasil simulasi dan model kurva normalnya dalam studi kasus keputusan pembelian mahasiswa.
+
+dist_nol_z <- opportunity_cost %>%
+  specify(decision ~ group,
+          success = "not buy video") %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 10000) %>%
+  calculate(stat = "z",
+            order = c("treatment", "control"))
+
+dist_sampling_oppcost <- opportunity_cost %>%
+  specify(decision ~ group,
+          success = "not buy video") %>%
+  assume(distribution = "z")
+visualise(dist_nol_z, method = "both")
+
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-dist-sim-teori-literasi-ntb
+#| fig-cap: Distribusi statistik hasil simulasi dan model kurva normalnya dalam studi kasus penduduk buta aksara.
+
+dist_boot_literasiNTB_z <- df_literasiNTB %>%
+  specify(response = status_literasi,
+          success = "Buta aksara") %>%
+  hypothesise(null = "point", p = 5/50) %>%
+  generate(reps = 10000, type = "bootstrap") %>%
+  calculate(stat = "z")
+
+dist_sampling_literasiNTB <- df_literasiNTB %>%
+  specify(response = status_literasi,
+          success = "Buta aksara") %>%
+  assume(distribution = "z")
+visualise(dist_boot_literasiNTB_z, method = "both")
+
+```
+:::
+:::
+
+## Kondisi-Kondisi Teknis
+
+Agar distribusi normal dapat digunakan untuk memodelkan distribusi sampling proporsi, kondisi-kondisi berikut harus terpenuhi.
+
+-   **Observasi-observasinya bebas.**
+
+-   **Sampelnya cukup besar:** Untuk proporsi, paling tidak terdapat 10 sukses dan 10 gagal.
+
+## Distribusi Normal {.smaller}
+
+Berikut ini adalah tinggi dan berat badan dari populasi orang berusia 18 tahun.
+
+::: columns
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-tinggi-populasi-18th
+#| fig-cap: Tinggi badan populasi orang berusia 18 tahun dengan $\mu = 1,73$ dan $\sigma = 0,048$
+
+TinggiBerat_populasi <- read_csv("dataset/SOCR_TinggiBerat.csv")
+TinggiBerat_populasi <- TinggiBerat_populasi %>%
+  mutate(
+    tinggi_m = round(tinggi_cm / 100, digits = 2)
+  ) %>%
+  select(tinggi_m, berat_kg)
+graf_tinggi_populasi <- ggplot(TinggiBerat_populasi, aes(x = tinggi_m)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 col = "white",
+                 fill = "#fc8d62",
+                 binwidth = 0.01) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(TinggiBerat_populasi$tinggi_m),
+                            sd = sd(TinggiBerat_populasi$tinggi_m)),
+                col = "#d95f02",
+                linewidth = 1
+  ) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+graf_tinggi_populasi
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-berat-populasi-18th
+#| fig-cap: Berat badan populasi orang berusia 18 tahun dengan $\mu = 57,6$ dan $\sigma = 5,29$
+
+graf_berat_populasi <- ggplot(TinggiBerat_populasi, aes(x = berat_kg)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 col = "white",
+                 fill = "#66c2a5",
+                 binwidth = 1) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(TinggiBerat_populasi$berat_kg),
+                            sd = sd(TinggiBerat_populasi$berat_kg)),
+                col = "#1b9e77",
+                linewidth = 1
+  ) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+graf_berat_populasi
+```
+:::
+:::
+
+## Distribusi Normal (2)
+
+Sebuah distribusi normal dapat dideskripsikan secara eksak dengan menggunakan dua **parameter**, yaitu $\mu$ dan $\sigma$.
+
+Distribusi normal pada @fig-tinggi-populasi-18th dan @fig-berat-populasi-18th dapat dituliskan seperti ini.
+
+$$
+N\left ( \mu = 1,73,\:\sigma = 0,048 \right )\; \mathrm{dan}\; N\left ( \mu = 57,6,\:\sigma = 5,29 \right )
+$$
+
+## Posisi Sebuah Nilai dalam Distribusi Data
+
+Bagaimana postur tubuh seseorang yang tingginya 1,75 m [dan berat badannya 55 kg]{.fragment} [dibandingkan dengan tinggi dan berat badan "ideal" populasi tersebut?]{.fragment}
+
+## Posisi Sebuah Nilai dalam Distribusi Data (2)
+
+::: columns
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-posisi-tinggi-populasi
+#| fig-cap: Posisi tinggi badan 1,75 m dalam distribusi data
+
+ggplot(TinggiBerat_populasi, aes(x = tinggi_m)) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(TinggiBerat_populasi$tinggi_m),
+                            sd = sd(TinggiBerat_populasi$tinggi_m)),
+                col = "#d95f02",
+                linewidth = 1
+  ) +
+  geom_vline(aes(xintercept = 1.75),
+             color = "#d95f02",
+             linewidth = 1,
+             linetype = "dashed") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-posisi-berat-populasi
+#| fig-cap: Posisi berat badan 55 kg dalam distribusi data
+
+ggplot(TinggiBerat_populasi,
+       aes(x = berat_kg)) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(TinggiBerat_populasi$berat_kg),
+                            sd = sd(TinggiBerat_populasi$berat_kg)),
+                col = "#1b9e77",
+                linewidth = 1
+  ) +
+  geom_vline(aes(xintercept = 55),
+             color = "#1b9e77",
+             linewidth = 1,
+             linetype = "dashed") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+:::
+:::
+
+## Distribusi Normal Baku {.smaller}
+
+Sembarang distribusi normal $N \left ( \mu, \: \sigma \right )$ dapat ditransformasi menjadi **distribusi normal baku**, yaitu $N \left ( \mu=0, \: \sigma=1 \right )$, dengan menentukan **skor z**. Misalkan $x$ adalah sebuah nilai (observasi) dalam distribusi $N \left ( \mu, \: \sigma \right )$, skor z ditentukan seperti berikut.
+
+$$
+z = \frac {x - \mu}{\sigma}
+$$
+
+## Skor z
+
+::: {.callout-important appearance="minimal"}
+**Skor z** dari suatu nilai (observasi) adalah banyaknya simpangan baku yang berada di bawah atau di atas reratanya. Nilai ini merepresentasikan posisi nilai (observasi) tersebut terhadap distribusi nilai-nilai lainnya.
+:::
+
+## Distribusi Normal Baku Tinggi Badan {.smaller}
+
+Berikut ini adalah transformasi distribusi tinggi badan, yang awalnya $N \left ( \mu = 1,73,\: \sigma = 0,048 \right )$ menjadi $N \left ( \mu = 1,\: \sigma = 0 \right )$.
+
+```{r}
+#| echo: false
+#| label: fig-dua-kurva-normal-tinggi
+#| fig-cap: Dua kurval normal yang memodelkan distribusi tinggi badan orang berusia 18 tahun, digambar pada bidang koordinat yang sama dan dengan skala yang sama.
+#| fig-asp: 0.5
+
+normal <- tibble(
+  x = c(rnorm(100000, mean = 0, sd = 1), TinggiBerat_populasi$tinggi_m),
+  group = c(rep(1, 100000), rep(2, 25000))
+)
+
+ggplot(normal, aes(x = x)) +
+  geom_hline(yintercept = 0) +
+  geom_function(fun = dnorm,
+                args = list(mean = 0, sd = 1),
+                color = "#d95f02", size = 1.5) +
+  geom_function(fun = dnorm,
+                args = list(mean = 1.73, sd = 0.048),
+                color = "#fc8d62", size = 1) +
+  labs(y = NULL, x = NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+```
+
+## Menentukan Skor z
+
+Skor z untuk tinggi badan $x = 1,75$ dalam $N \left ( \mu = 1,73, \: \sigma = 0,048 \right )$.
+
+$$
+\frac{\left ( x - \mu \right )}{\sigma} = \frac{1,75 - 1,73}{0,048} \approx 0,42
+$$
+
+Skor z untuk berat badan $x = 55$ dalam $N \left ( \mu = 57,6, \: \sigma = 5,29 \right )$.
+
+$$
+\frac{\left ( x - \mu \right )}{\sigma} = \frac{55 - 57,6}{5,29} \approx -0,49
+$$
+
+## Distribusi Normal Baku untuk Tinggi dan Berat Badan {.smaller}
+
+Bagaimana postur tubuh seseorang yang tingginya 1,75 m dan berat badannya 55 kg dibandingkan dengan tinggi dan berat badan "ideal" populasi tersebut?
+
+```{r}
+#| echo: false
+#| label: fig-normal-baku-tinggi-berat
+#| fig-cap: Kurva normal baku yang memodelkan distribusi dua variabel sekaligus, yaitu tinggi dan berat badan, disertai dengan visualisasi skor-skor z untuk tinggi 1,75 m ($z =$ 0,42, garis oranye) dan berat badan 55 kg ($z =$ -0,49, garis hijau).
+#| fig-asp: 0.3
+
+tg_bdn <- (1.75 - 1.73) / 0.048
+brt_bdn <- (55 - 57.6) / 5.29
+
+ggplot(data.frame(x = c(-4,4)),
+       aes(x = x)) +
+  geom_hline(yintercept = 0) +
+  geom_function(fun = dnorm,
+                args = list(mean = 0, sd = 1),
+                linewidth = 1.5) +
+  geom_vline(xintercept = tg_bdn,
+             col = "#d95f02",
+             linetype = "dashed",
+             linewidth = 1) +
+  geom_vline(xintercept = brt_bdn,
+             col = "#1b9e77",
+             linetype = "dashed",
+             linewidth = 1) +
+  scale_x_continuous(name = "Skor z",
+                     breaks = seq(-4, 4, 1)
+                     ) +
+  labs(y = NULL, x = NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+```
+
+## Menilai Postur Tubuh Seseorang {.smaller}
+
+Bagaimana postur tubuh seseorang yang tingginya 1,75 m dan berat badannya 55 kg dibandingkan dengan tinggi dan berat badan "ideal" populasi tersebut?
+
+Berdasarkan @fig-normal-baku-tinggi-berat, tinggi orang tersebut lebih besar daripada tinggi rata-rata, tetapi berat badannya kurang dari berat badan rata-rata. [Dengan demikian, orang tersebut memiliki perawakan yang tinggi tetapi agak kurus (dibandingkan dengan postur "ideal" populasinya).]{.fragment}
+
+## Ayo Mencoba! {.smaller}
+
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Blennie_d%27eau_douce-Salaria_fluviatilis.JPG/320px-Blennie_d%27eau_douce-Salaria_fluviatilis.JPG){fig-alt="Gambar: Olivier Croissant / Wikimedia" style="float:right;" width="150"}
+
+Panjang ikan-ikan *Salaria fluviatilis* kurang lebih berdistribusi normal dengan rerata 77,6 mm dan simpangan baku 15,8 mm [@arranz2022]. (a) Hitunglah skor z untuk dua ikan jenis ini yang panjangnya 61 mm dan 82 mm, dan (b) sketsalah kedua skor z tersebut untuk melihat posisinya dalam distribusi normal baku.
+
+## Perhitungan Peluang dengan Distribusi Normal Baku
+
+Hasil Tes Kemampuan Dasar Akademik (TKDA) seluruh pelamar sebuah beasiswa kurang lebih berdistribusi normal, $N \left ( \mu = 175,\: \sigma = 30 \right )$. Tepat setelah Wulan menyelesaikan tes tersebut secara daring, dia mendapati bahwa skornya adalah 220. Dia ingin mengetahui dia terletak di persentil ke berapa.
+
+Bantu Wulan untuk menjawab rasa penasarannya!
+
+## Menentukan Persentil {.smaller}
+
+::: columns
+::: {.column width="60%"}
+Sebelum menentukan persentilnya Wulan, kita tentukan skor z dari skor TKDA-nya.
+
+$$
+z = \frac {x - \mu}{\sigma} = \frac {220 - 175}{30} = 1,5
+$$
+
+Persentil tersebut menunjukkan persentase pelamar yang skor TKDA-nya kurang dari skor Wulan. Persentase ini direpresentasikan sebagai luas daerah di sebelah kiri $z = 1,5$ dan di bawah kurva normal, seperti yang ditunjukkan dengan luas daerah yang diarsir pada @fig-persentil-tkda-wulan.
+:::
+
+::: {.column width="40%"}
+```{r}
+#| echo: false
+#| label: fig-persentil-tkda-wulan
+#| fig-cap: Luas daerah yang diarsir menunjukkan persentase pelamar yang skor TKDA-nya di bawah skor Wulan.
+#| fig-asp: 0.75
+
+ggplot(data.frame(x = c(-4, 4)),
+       aes(x = x)) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                xlim = c(-4, 1.5),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .8) +
+  geom_segment(aes(x = 1.5, y = 0,
+                   xend = 1.5,
+                   yend = dnorm(1.5))) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                linewidth = 1.5) +
+  scale_x_continuous(name = "Skor z",
+                     breaks = seq(-4, 4, 1)
+                     ) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+:::
+:::
+
+## Menentukan Persentil (2)
+
+Persentil ke berapakah skor Wulan?
+
+```{r}
+#| echo: true
+
+pstlWulan <- pnorm(1.5, mean = 0, sd = 1)
+pstlWulan
+
+```
+
+Jadi, skor TKDA yang diperoleh Wulan berada di persentil ke-`r round(pstlWulan * 100, digits = 2)`.
+
+## Menentukan Skor z Diketahui Persentilnya {.smaller}
+
+Bagaimana menentukan skor z seseorang yang skor TKDA-nya berada pada persentil ke-95?
+
+```{r}
+#| echo: true
+
+qnorm(0.95, mean = 0, sd = 1)
+
+```
+
+Berapa skor TKDA orang tersebut?
+
+$$
+x = \mu + z \cdot \sigma \approx 175 + 1,64 \cdot 30 = 224,2
+$$
+
+::: {.callout-note appearance="minimal"}
+Fungsi `pnorm()` dan `qnorm()` jika tidak ditambahkan argumen "lower.tail" akan menghitung peluang atau skor z yang bersesuaian dengan luas daerah di sebelah kiri. Untuk sebelah kanan, kita perlu menambahkan "lower.tail = TRUE".
+:::
+
+## Ayo Mencoba!
+
+::: columns
+::: {.column width="60%"}
+Vino secara acak terpilih untuk mengikuti TKDA. Kemampuan dasar akademik yang dimiliki Vino tidak diketahui.
+
+Berapakah peluang skor TKDA Vino lebih dari 190?
+:::
+
+::: {.column width="40%"}
+```{r}
+#| echo: false
+#| label: fig-peluang-vino-190
+#| fig-cap: Peluang skor TKDA Vino yang lebih dari 190 direpresentasikan ke dalam luas daerah yang diarsir.
+#| fig-asp: 0.75
+
+ggplot(data.frame(x = c(50, 300)),
+       aes(x = x)) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = 175,
+                            sd = 30),
+                xlim = c(190, 300),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .8) +
+  geom_segment(aes(x = 190, y = 0,
+                   xend = 190,
+                   yend = dnorm(190,
+                                mean = 175,
+                                sd = 30))) +
+  stat_function(fun = dnorm,
+                args = list(mean = 175,
+                            sd = 30),
+                linewidth = 1.5) +
+  scale_x_continuous(name = "Skor TKDA",
+                     breaks = seq(55, 295, 30)
+                     ) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+:::
+:::
+
+## Variabilitas Statistik {.smaller}
+
+::: columns
+::: {.column width="50%"}
+**Galat Standar (**$\boldsymbol{SE}$ **atau *Standard Error*)**
+
+$SE$ merupakan simpangan baku dari distribusi sampling suatu statistik. Dengan kata lain, $SE$ ini menunjukkan seberapa menyebar statistik yang digunakan sebagai titik estimasi tersebut.
+:::
+
+::: {.column width="50%"}
+**Pias Galat (*Margin of Error*)**
+
+Pias galat merepresentasikan selisih maksimum yang mungkin antara statistik sampel yang dimiliki dan nilai sebenarnya dari parameter populasi yang diestimasi oleh statistik tersebut.
+:::
+:::
+
+## Pias Galat untuk Proporsi Sampel
+
+::: {.callout-important appearance="minimal"}
+Pias galat ditentukan dengan mengalikan nilai batas dengan galat standar: $z^{\star} \cdot SE$.
+
+Nilai $z^{\star}$ yang umum digunakan adalah 1,96 yang mengindikasikan bahwa pias galatnya merepresentasikan variabilitas dari 95% statistik-statistiknya.
+:::
+
+## Ayo Mencoba!
+
+::: columns
+::: {.column width="50%"}
+Sebanyak 25 pelamar beasiswa dipilih secara acak untuk ditentukan rerata skor TKDA-nya. Dengan $SE = 6$, tentukan peluang bahwa rerata tersebut di antara 170 dan 185!
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-peluang-25-orang-170-185
+#| fig-cap: Peluang rerata skor TKDA 25 orang di antara 170 dan 185 yang direpresentasikan ke dalam luas daerah yang diarsir.
+#| fig-asp: 0.75
+
+ggplot(data.frame(x = c(145, 200)),
+       aes(x = x)) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = 175,
+                            sd = 6),
+                xlim = c(170, 185),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .8) +
+  geom_segment(aes(x = 170, y = 0,
+                   xend = 170,
+                   yend = dnorm(170,
+                                mean = 175,
+                                sd = 6))) +
+  geom_segment(aes(x = 185, y = 0,
+                   xend = 185,
+                   yend = dnorm(185,
+                                mean = 175,
+                                sd = 6))) +
+  stat_function(fun = dnorm,
+                args = list(mean = 175,
+                            sd = 6),
+                linewidth = 1.5) +
+  scale_x_continuous(name = "Skor TKDA",
+                     breaks = seq(145, 200, 5)
+                     ) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+:::
+:::
+
+## Studi Kasus (Uji Hipotesis): Biaya Peluang
+
+Kita akan menjawab pertanyaan berikut.
+
+> Apakah konsumen mahasiswa selalu mempertimbangkan prinsip bahwa uang yang tidak dibelanjakan sekarang dapat dibelanjakan nanti?
+
+Kali ini kita tidak menggunakan simulasi, tetapi kita gunakan distribusi normal untuk memodelkan distribusi nolnya.
+
+## Data Sampel
+
+Kita lihat kembali data sampel dari `opportunity_cost`. Ringkasan data sampel tersebut telah disajikan dalam @tbl-ringkasan-dec-group-opp-cost pada @sec-eksplorasi-data-opp-cost.
+
+Kita analisis ulang data sampel tersebut menggunakan distribusi normal dan membandingkan hasilnya dengan hasil uji randomisasi yang telah dilakukan sebelumnya.
+
+## Variabilitas Statistik {.smaller}
+
+::: columns
+::: {.column width="50%"}
+@fig-model-normal-dist-nol-opp-cost menggambarkan distribusi nol selisih proporsi dari simulasi 10000 sampel dan kurva normal yang paling cocok dengan distribusi nol tersebut.
+
+Kurva normal tersebut memiliki $\mu = 0$ dan $SE = 0,076$.
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-model-normal-dist-nol-opp-cost
+#| fig-cap: Distribusi nol selisih proporsi dari studi biaya peluang yang dilapisi dengan model distribusi normalnya.
+#| fig-asp: 0.75
+
+ggplot(dist_nol, aes(x = stat)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 0.05,
+                 col = "white",
+                 fill = "#1f78b4",
+                 alpha = .8) +
+  geom_hline(yintercept = 0) +
+  geom_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 0.076),
+                linewidth = 1) +
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  annotate("segment", x = 0.2, y = 0,
+           xend = 0.2, yend = 2,
+           linetype = "dashed") +
+  annotate("text", x = 0.2, y = 2.8,
+           label = "selisih prop.\nsampel")
+
+```
+:::
+:::
+
+## Statistik Uji
+
+Dalam @sec-titik-est-opp-cost kita telah menghitung titik estimasi selisih proporsi sampelnya adalah 0,2. Skor z selisih proporsi tersebut dapat dihitung seperti berikut.
+
+$$
+z = \frac {\text{selisih prop. sampel}-\mu}{SE} = \frac {0,2-0}{0,076} \approx 2,63
+$$
+
+## Nilai-P {.smaller}
+
+::: columns
+::: {.column width="50%"}
+Nilai-P untuk masalah ini digambarkan sebagai luas daerah yang diarsir pada @fig-nilai-p-model-norm-opp-cost.
+
+```{r}
+#| echo: false
+#| label: fig-nilai-p-model-norm-opp-cost
+#| fig-cap: Nilai-P direpresentasikan sebagai luas daerah yang diarsir.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-4, 4)),
+       aes(x = x)) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                xlim = c(2.63, 4),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .8) +
+  geom_segment(aes(x = 2.63, y = 0,
+                   xend = 2.63,
+                   yend = dnorm(2.63))) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                linewidth = 1.5) +
+  scale_x_continuous(name = "Skor z",
+                     breaks = seq(-4, 4, 1)
+                     ) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+:::
+
+::: {.column width="50%"}
+Nilai-P tersebut dapat dihitung seperti berikut.
+
+```{r}
+#| echo: true
+
+pnorm(2.63, mean = 0, sd = 1,
+      lower.tail = FALSE)
+
+```
+
+Nilai-P yang dihitung dengan menggunakan model distribusi normal tersebut, yaitu sebesar `r round(pnorm(2.63, mean = 0, sd = 1, lower.tail = FALSE), digits = 4)`, nilainya kurang lebih sama dengan ketika dihitung dengan menggunakan uji randomisasi, yaitu `r round(nilai_P[1, 1], digits = 4)`.
+:::
+:::
+
+## Kesimpulan
+
+Karena kita mendapatkan nilai-P yang sangat kecil, yaitu kurang dari 0,05, terdapat cukup bukti sampel bahwa eksperimennya mempengaruhi pengeluaran mahasiswa.
+
+Kesimpulan tersebut sama dengan kesimpulan ketika kita melakukan uji randomisasi.
+
+## Latihan 1.3
+
+Lakukan analisis ulang terhadap data `heart_transplant` dengan menggunakan model distribusi normal. Untuk melakukannya, gunakan $SE = 0,08$.
+
+## Studi Kasus (Selang Kepercayaan): Penduduk Buta Aksara
+
+Kita akan menjawab pertanyaan berikut.
+
+> Berapakah proporsi penduduk NTB berusia 15 tahun ke atas yang masih buta aksara?
+
+Kita akan mengkonstruksi selang kepercayaan dengan menggunakan model matematis.
+
+## Data Sampel
+
+Kita analisis ulang data sampel yang telah disajikan dalam @sec-sk-buta-aksara: Dari sampel yang berukuran 50 (penduduk NTB yang berusia 15 tahun ke atas), 5 di antaranya buta aksara.
+
+Dengan demikian estimasi titik penduduk NTB yang buta aksara adalah seperti berikut.
+
+$$
+\hat{p}=\frac {5}{50}=0,1
+$$
+
+## Variabilitas Statistik
+
+@fig-dist-sampling-boot-normal-literasi-ntb adalah sebuah distribusi yang menunjukkan bagaimana statistik $\hat {p}$ bervariasi dari sampel ke sampel. Distribusi tersebut ditentukan dengan metode bootstrap dan menggunakan model distribusi normal.
+
+```{r}
+#| echo: false
+#| label: fig-dist-sampling-boot-normal-literasi-ntb
+#| fig-cap: Distribusi sampling proporsi penduduk NTB 15 tahun ke atas yang buta aksara.
+
+ggplot(dist_boot_literasiNTB, aes(x = stat)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 0.02,
+                 col = "white",
+                 fill = "#1f78b4",
+                 alpha = .8) +
+  geom_hline(yintercept = 0) +
+  geom_function(fun = dnorm,
+                args = list(mean = 0.1,
+                            sd = sqrt(0.1*0.9/50)),
+                linewidth = 1) +
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+
+## Selang Kepercayaan 95% {.smaller}
+
+Dengan menggunakan distribusi normal baku (sebagai model distribusi samplingnya), kita akan memilih 95% statistik-statistik yang terletak di kanan dan kiri pusatnya.
+
+Apa batas atas dan bawahnya? Dalam model distribusi normal bakunya (lihat @fig-vis-sk-matematis-literasi-ntb), batas atasnya `qnorm(0.975, mean = 0, sd = 1)` dan batas bawahnya `qnorm(0.025, mean = 0, sd = 1)`.
+
+```{r}
+#| echo: false
+#| label: fig-vis-sk-matematis-literasi-ntb
+#| fig-cap: Selang kepercayaan yang memuat 95% statistik-statistik yang berada di sekitar pusatnya.
+#| fig-asp: 0.3
+
+ggplot(data.frame(x = c(-4, 4)),
+       aes(x = x)) +
+  geom_hline(yintercept = 0) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                xlim = c(-1.959964,1.959964),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .8) +
+  geom_segment(aes(x = -1.959964, y = 0,
+                   xend = -1.959964,
+                   yend = dnorm(-1.959964,
+                                mean = 0,
+                                sd = 1))) +
+  geom_segment(aes(x = 1.959964, y = 0,
+                   xend = 1.959964,
+                   yend = dnorm(1.959964,
+                                mean = 0,
+                                sd = 1))) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                linewidth = 1.5) +
+  scale_x_continuous(name = "Skor z",
+                     breaks = seq(-4, 4, 1)
+                     ) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+
+## Selang Kepercayaan 95% (2) {.smaller}
+
+```{r}
+#| include: false
+
+SE_samplingNTB <- sqrt(0.1*0.9/50)
+pgalat_NTB <- round(qnorm(0.975,
+                           mean = 0,
+                           sd = 1) * SE_samplingNTB,
+                     2)
+```
+
+Karena $SE = 0,042$ (mengapa?), dan persentil ke-97,5 pada @fig-vis-sk-matematis-literasi-ntb tadi sekitar `r round(qnorm(0.975, mean = 0, sd = 1), 2)`, maka pias galatnya adalah sebagai berikut.
+
+$$
+z^{\star} \cdot SE=1,96 \cdot 0,042 \approx 0,08
+$$
+
+Jadi, selang kepercayaannya adalah 0,1 ± 0,08 atau (0,02, 0,18).
+
+## Kesimpulan
+
+Kita 95% yakin bahwa proporsi penduduk NTB berusia 15 tahun ke atas yang buta aksara di antara `r (0.1-pgalat_NTB)*100`% dan `r (0.1+pgalat_NTB)*100`%.
+
+## Latihan 1.4
+
+Lakukan analisis ulang terhadap data sampel pada Latihan 1.2. Dengan data tersebut, buatlah selang kepercayaan 95% untuk mengestimasi proporsi mahasiswa program studi Pendidikan Matematika yang berkeinginan menjadi pendidik atau guru Matematika!
+
+## Latihan 1.5 {.smaller}
+
+![](figs/NIAID-Flickr.jpg){fig-alt="Gambar: NIAID / Flickr" style="float:right;" width="150"}
+
+**Vaksin malaria.** Dalam sebuah penelitian vaksin malaria, sejumlah 28 orang menerima vaksin tersebut. Sembilan belas minggu kemudian, semua orang tersebut diberikan parasit malaria yang sensitif terhadap obat. Hasilnya, 18 orang tersebut tidak terinfeksi malaria [diadaptasi dari @lyke2017a].
+
+Ujilah klaim (baik dengan menggunakan uji randomisasi maupun model matematis) bahwa lebih dari 50% orang yang menggunakan vaksin tersebut tidak terjangkit malaria meskipun terpapar dengan parasit malaria!
+
+## Daftar Pustaka {#ref}
+
+::: {#refs}
+:::

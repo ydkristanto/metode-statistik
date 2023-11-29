@@ -1,0 +1,52 @@
+---
+title: "STAT503 Metode Statistik"
+subtitle: "Ujian Tengah Semester (UTS): Landasan Inferensi"
+author: "Yosep Dwi Kristanto"
+format:
+  pdf:
+    number-sections: true
+    papersize: a4
+    geometry: 
+      - top = 30mm
+      - left = 30mm
+      - bottom = 30mm
+      - right = 30mm
+crossref: 
+  fig-title: Gambar
+  fig-prefix: Gambar
+  tbl-title: Tabel
+  tbl-prefix: Tabel
+  sec-prefix: Bagian
+---
+
+# Soal: Video di Luar Ruangan
+
+Misalkan kalian ingin mengestimasi proporsi video-video Youtube yang pengambilan gambarnya (sebagian atau keseluruhan) dilakukan di luar ruangan. Kalian memilih sampel acak yang terdiri dari 154 video Youtube dan kalian memperoleh 45 video yang pengambilan gambarnya dilakukan di luar ruangan.
+
+Buatlah sebuah selang kepercayaan 95% untuk mengestimasi persentase video-video Youtube yang pengambilan gambarnya dilakukan di luar ruangan!
+
+------------------------------------------------------------------------
+
+# Jawaban
+
+Permasalahan yang diberikan akan diselesaikan melalui lima tahapan. Tahapan-tahapan tersebut dipaparkan sebagai berikut.
+
+## Mengklarifikasi Pertanyaan
+
+*\[Secara jelas tuliskan rumusan masalah/pertanyaan yang ingin Anda jawab dengan metode statistik!\]*
+
+## Mempersiapkan dan Mengeksplorasi Data
+
+*\[Buatlah data sampel yang sesuai dengan informasi dalam soal. Visualisasikan data tersebut.\]*
+
+## Memodelkan Variabilitas Statistik
+
+*\[Modelkan variabilitas statistik-statistiknya berdasarkan sampel yang dimiliki dengan menggunakan dua metode: (a) bootstrap, dan (b) kurva normal. Hasil dari dua metode tersebut kemudian dapat divisualisasikan pada satu bidang atau sendiri-sendiri.\]*
+
+## Membuat Selang Kepercayaan
+
+*\[Berdasarkan variabilitas statistik yang diperoleh dari dua metode, buatlah selang kepercayaan 95% untuk tiap-tiap metode tersebut.\]*
+
+## Membuat Kesimpulan
+
+*\[Buatlah kesimpulan berdasarkan selang kepercayaan yang diperoleh dari tiap-tiap metode.\]*

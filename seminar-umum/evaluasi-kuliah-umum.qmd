@@ -1,0 +1,108 @@
+---
+title: "Evaluasi Kuliah Umum"
+format: pdf
+date: 2023/11/24
+date-format: long
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+library(readxl)
+library(readr)
+library(scales)
+library(tidytext)
+```
+
+Secara umum mahasiswa memberikan penilaian yang positif terhadap pelaksanaan kuliah umum Metode Statistik. Mereka memberikan penilaian yang sangat positif terhadap penguasaan materi fasilitator/narasumber. Selain itu, mereka menganggap bahwa materi yang disampaikan fasilitator dapat diaplikasikan di masa depan mereka. Lebih jauh, mereka juga menganggap bahwa materi tersebut memberikan pengetahuan baru bagi mereka.
+
+Meskipun demikian, para mahasiswa memberikan penilaian yang lebih rendah daripada yang lain terkait dengan teknik penyampaian materi yang dilakukan fasilitator. Selain aspek tersebut, mahasiswa juga memberikan penilaian yang relatif rendah terhadap kejelasan penyampaian materinya dan upaya fasilitator dalam mendorong partisipasi aktif mahasiswa. Detail penilaian mahasiswa disajikan pada @fig-tertutup.
+
+```{r}
+#| include: false
+
+df_angket <- read_excel("F:/USD/03 Metode Statistika/Bahan Ajar Metode Statistik v.2023/seminar-umum/Evaluasi Kuliah Umum Metode Statistik (Jawaban).xlsx") %>%
+  filter(!NIM == 1) %>%
+  select(!c(Nama, NIM))
+
+df_angket_panjang <- df_angket %>%
+  pivot_longer(
+    cols = 3:19,
+    names_to = "Pertanyaan",
+    values_to = "Respons"
+  )
+```
+
+```{r}
+#| echo: false
+#| label: fig-tertutup
+#| fig-cap: Penilaian 49 mahasiswa terhadap penyelenggaraan kuliah umum Metode Statistik.
+#| fig-asp: 1.2
+
+df_angket_panjang %>%
+  ggplot(aes(y = Pertanyaan)) +
+  geom_bar(aes(fill = factor(Respons))) +
+  scale_y_discrete(labels = label_wrap(50)) +
+  scale_fill_discrete(name = "Skor") +
+  theme(legend.position = "right",
+        axis.title = element_blank())
+```
+
+@fig-terbuka menunjukkan kata yang paling sering muncul dalam pengakuan mahasiswa terhadap manfaat yang diperolehnya dan masukan terhadap kuliah umum Metode Statistik. Sejalan dengan apa yang disajikan pada @fig-tertutup, mahasiswa mengakui bahwa kuliah umum tersebut memberikan pengetahuan yang baru bagi mereka. Mereka juga mengapresiasi akan dikenalkan/digunakannya perangkat lunak SPSS dalam kuliah tersebut.
+
+Sejalan juga dengan @fig-tertutup, mahasiswa banyak memberikan masukan terhadap penyampaian materi dalam kuliah umum tersebut. Dengan banyaknya penyebutan kata "pelan", "terburu", "buru", dan "cepat" menunjukkan adanya harapan mahasiswa bahwa penyajian materinya perlu dibuat lebih pelan.
+
+```{r}
+#| include: false
+
+teks_manfaat <- df_angket %>%
+  select(`Manfaat dari kuliah umum Metode Statistik`) %>%
+  unnest_tokens("word",
+                `Manfaat dari kuliah umum Metode Statistik`)
+
+teks_masukan <- df_angket %>%
+  select(`Masukan atau saran terhadap pelaksanaan kuliah umum Metode Statistik`) %>%
+  unnest_tokens("word",
+                `Masukan atau saran terhadap pelaksanaan kuliah umum Metode Statistik`)
+
+stopwords_id <- read_csv("https://raw.githubusercontent.com/stopwords-iso/stopwords-id/master/stopwords-id.txt", 
+    col_names = FALSE) %>%
+  mutate(word = X1) %>%
+  select(word)
+```
+
+```{r}
+#| include: false
+
+teks_manfaat_atas <- teks_manfaat %>%
+  anti_join(stopwords_id,
+            by = join_by(word)) %>%
+  count(word, sort = TRUE) %>%
+  top_n(10, n) %>%
+  mutate(jenis = rep("manfaat",10))
+
+teks_masukan_atas <- teks_masukan %>%
+  anti_join(stopwords_id,
+            by = join_by(word)) %>%
+  count(word, sort = TRUE) %>%
+  top_n(10, n) %>%
+  mutate(jenis = rep("masukan", 13))
+
+manfaat_masukan <- rbind(teks_manfaat_atas, teks_masukan_atas)
+```
+
+```{r}
+#| echo: false
+#| label: fig-terbuka
+#| fig-cap: Kata yang paling sering muncul dalam respons mahasiswa terhadap manfaat yang diterimanya dan masukan terhadap kuliah umum.
+
+manfaat_masukan %>%
+  na.omit() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(y = word, x = n, fill = n)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(.~jenis, scales = "free") +
+  theme(axis.title = element_blank())
+```

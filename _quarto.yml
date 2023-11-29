@@ -1,0 +1,12 @@
+project:
+  title: "Bahan Ajar Metode Statistik v.2023"
+author: "Yosep Dwi Kristanto"
+crossref: 
+  fig-title: Gambar
+  fig-prefix: Gambar
+  tbl-title: Tabel
+  tbl-prefix: Tabel
+  sec-prefix: Bagian
+  eq-prefix: Persamaan
+editor: visual
+

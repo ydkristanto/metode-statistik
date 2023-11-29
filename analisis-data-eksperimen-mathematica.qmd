@@ -1,0 +1,149 @@
+---
+title: "Analisis Data Eksperimen Penggunaan Wolfram Mathematica"
+format: pdf
+---
+
+```{r}
+#| label: pengaturan
+#| echo: true
+
+library(tidyverse)
+library(haven)
+library(ggdist)
+library(infer)
+
+```
+
+## Pertanyaan
+
+Berikut ini adalah pertanyaan yang akan kita jawab.
+
+> Apakah penggunaan Wolfram Mathematica berpengaruh secara positif terhadap hasil belajar mahasiswa?
+
+Kita duga penggunannya memiliki pengaruh yang positif.
+
+## Hipotesis Nol dan Alternatifnya {.smaller}
+
+Berdasarkan klaim awal, hipotesis nol dan alternatifnya adalah sebagai berikut.
+
+-   $H_0$: Hasil belajar mahasiswa bebas terhadap penggunaan Wolfram Mathematica. Misalkan $\mu_{\text{eks}}$ dan $\mu_{\text{kontrol}}$ secara berturut-turut adalah rerata hasil belajar mahasiswa di dalam pembelajaran yang menggunakan Wolfram Mathematica (kelas eksperimen) dan yang tidak (kelas kontrol), maka $\mu_{\text{eks}}-\mu_{\text{kontrol}} = 0$.
+
+-   $H_A$: Penggunaan Wolfram Mathematica berpengaruh positif terhadap hasil belajar mahasiswa. Dengan demikian, $\mu_{\text{eks}}-\mu_{\text{kontrol}} > 0$.
+
+## Data dan Konteksnya {.smaller}
+
+Untuk menjawab pertanyaan awal, kita gunakan data skripsi yang dilakukan oleh Mujiati. Di dalam penelitian tersebut, peneliti melakukan eksperimen kuasi. Di dalam kelompok eksperimen, peserta didik mengalami pembelajaran yang menggunakan Wolfram Mathematica sedangkan dalam kelompok kontrol tidak (pembelajaran seperti biasa).
+
+```{r}
+#| label: tbl-data-eksperimen
+#| echo: false
+
+df_Math <- read_sav("dataset/pengaruh-mathematica.sav")
+
+df_Math2 <- df_Math %>%
+  mutate(hasil_belajar = Hasil_Belajar,
+         kelompok = ifelse(Kelompok == 1,
+                           "eksperimen",
+                           "kontrol")) %>%
+  select("kelompok", "hasil_belajar")
+
+head(df_Math2)
+```
+
+## Eksplorasi Data
+
+Sebelum melakukan uji hipotesis, kita lihat distribusi data hasil belajar peserta didik di kelas eksperimen dan kontrol. Distribusi tersebut ditunjukkan pada @fig-dist-kelompok-eks-kontrol.
+
+```{r}
+#| echo: true
+#| label: fig-dist-kelompok-eks-kontrol
+#| fig-cap: Distribusi data hasil belajar di kelas eksperimen dan kontrol.
+#| fig-asp: 0.5
+
+df_Math2 %>%
+  ggplot(aes(x = hasil_belajar,
+             y = kelompok,
+             fill = kelompok)) +
+  stat_slab(aes(thickness = after_stat(pdf*n)),
+             scale = 0.7) +
+  stat_dotsinterval(side = "bottom",
+                    scale = 0.7,
+                    slab_linewidth = NA) +
+  xlim(c(30, 100)) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = "Hasil belajar") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+
+Selisih rerata hasil belajar dari kedua kelompok tersebut dihitung seperti berikut.
+
+```{r}
+#| label: selisih-rerata
+#| echo: true
+
+d_topi <- df_Math2 %>%
+  specify(hasil_belajar ~ kelompok) %>%
+  calculate(stat = "diff in means",
+            order = c("eksperimen",
+                      "kontrol"))
+d_topi
+```
+
+## Variabilitas Statistik
+
+Dengan mengasumsikan hipotesis nol benar, kita buat distribusi sampling selisih reratanya dengan melakukan uji randomisasi.
+
+```{r}
+#| label: dist-sampling-randomisasi
+#| echo: true
+
+dist_sampling_Math <- df_Math2 %>%
+  specify(hasil_belajar ~ kelompok) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 10000,
+           type = "permute") %>%
+  calculate(stat = "diff in means",
+            order = c("eksperimen",
+                      "kontrol"))
+
+```
+
+@fig-dist-sampling berikut memvisualisasikan distribusi sampling hasil simulasi 10.000 pasangan sampel beserta dengan posisi `d_topi`.
+
+```{r}
+#| label: fig-dist-sampling
+#| echo: true
+#| fig-cap: Distribusi sampling hasil uji randomisasi dengan mengasumsikan hipotesis nol benar.
+#| fig-asp: 0.5
+
+dist_sampling_Math %>%
+  ggplot() +
+  geom_dots(aes(x = stat),
+            binwidth = unit(c(1, Inf), "mm"),
+            overflow = "compress",
+            alpha = 0.25) +
+  labs(x = "Selisih rerata")
+```
+
+## Nilai-P
+
+Nilai-P dapat dihitung dengan menggunakan kode berikut.
+
+```{r}
+#| warning: false
+#| echo: true
+
+nilai_P <- dist_sampling_Math %>%
+  get_p_value(obs_stat = d_topi,
+              direction = "greater")
+
+nilai_P_num <- as.numeric(nilai_P[1,1])
+nilai_P_num
+```
+
+## Kesimpulan
+
+Karena nilai-P sangat kecil, yaitu sekitar `r nilai_P_num`, maka kita tolak hipotesis nol. Terdapat cukup bukti untuk mendukung klaim bahwa penggunaan Wolfram Mathematica berpengaruh positif terhadap hasil belajar peserta didik.

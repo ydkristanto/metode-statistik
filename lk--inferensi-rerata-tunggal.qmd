@@ -1,0 +1,460 @@
+---
+title: "Inferensi untuk Rerata Tunggal"
+abstract: |
+  Salah satu permasalahan statistik adalah menguji klaim tentang rerata suatu populasi. Artikel ini mendemonstrasikan bagaimana menguji klaim seperti itu dengan menggunakan uji t atau uji peringkat-bertanda Wilcoxon dengan menggunakan R. Selain itu, artikel ini juga membahas bagaimana membuat estimasi selang atau selang kepercayaan untuk mengestimasi rerata populasi tersebut.
+date: 2023/11/28
+author:
+  - name: Yosep Dwi Kristanto
+    url: https://people.usd.ac.id/~ydkristanto/
+    affiliation: Pendidikan Matematika, Universitas Sanata Dharma, Yogyakarta
+    affiliation-url: https://www.usd.ac.id/
+language: _language-id.yml
+type: webpage
+container-title: "Metode Statistik"
+format:
+  html:
+    toc: true
+    grid: 
+      content-mode: auto
+    number-sections: true
+    keywords: "normalitas, selang kepercayaan, uji hipotesis, uji t, uji Wilcoxon"
+    page-layout: article
+    code-fold: true
+    code-tools: true
+    code-line-numbers: true
+    anchor-sections: true
+    smooth-scroll: true
+execute: 
+  echo: true
+  warning: false
+bibliography: references.bib
+csl: apa.csl
+google-scholar: true
+---
+
+```{r}
+#| label: pengaturan
+
+library(tidyverse)
+library(readr)
+library(knitr)
+library(kableExtra)
+library(ggpubr)
+```
+
+# Pertanyaan
+
+Di bagian ini kita akan menjawab dua pertanyaan berikut.
+
+-   Apakah rerata skor Tes Kemampuan Dasar Akademik (TKDA) para pelamar sebuah beasiswa lebih dari 160?
+
+-   Berapakah rerata skor TKDA para pelamar tersebut?
+
+Pertanyaan pertama akan kita jawab dengan menggunakan **uji hipotesis** sedangkan pertanyaan kedua kita jawab dengan **selang kepercayaan**.
+
+# Uji Hipotesis
+
+Menanggapi pertanyaan pertama, seorang peneliti berhipotesis bahwa rerata skor Tes Kemampuan Dasar Akademik (TKDA) para pelamar beasiswa lebih dari 160. Kita akan menguji hipotesis peneliti tersebut dengan menggunakan data `sampel_tkda`[^1].
+
+[^1]: Data terebut diimpor dari fail yang tersedia di web, yaitu <https://people.usd.ac.id/~ydkristanto/metode-statistik/dataset/sampel_tkda.csv>.
+
+```{r}
+#| label: data-tkda
+#| code-fold: false
+
+sampel_tkda <- read_csv(
+  "https://people.usd.ac.id/~ydkristanto/metode-statistik/dataset/sampel_tkda.csv",
+  show_col_types = FALSE
+  )
+```
+
+Uji hipotesis yang dapat digunakan untuk menguji klaim tentang rerata satu populasi adalah uji $t$. Uji ini memiliki dua kondisi teknis sebagai berikut.
+
+-   **Bebas.** Observasi-observasi dalam sampel harus bebas. Kondisi ini terpenuhi ketika sampelnya merupakan sampel acak sederhana.
+
+-   **Normalitas.** Ketika sampelnya kecil ($n \leq 30$), sampel tersebut harus berasal dari populasi yang berdistribusi normal. Ketika sampelnya besar, sampel tersebut tidak harus berasal dari populasi yang berdistribusi normal.
+
+Oleh karena itu, pertama kita eksplorasi data `sampel_tkda` tersebut dan kita cari tahu apakah memenuhi dua kondisi teknis penggunaan uji $t$.
+
+## Eksplorasi Data
+
+### Statistik Deskriptif
+
+Kita lihat ukuran, rerata, dan simpangan baku dari skor akhir TKDA dalam data sampel tersebut. Ketiga statistik tersebut ditunjukkan pada @tbl-stat-sampel-tkda.
+
+```{r}
+#| label: tbl-stat-sampel-tkda
+#| tbl-cap: Statistik deskriptif dari skor akhir dalam data `sampel_tkda`.
+
+stat_tkda <- sampel_tkda %>%
+  summarise(rerata = mean(skor_akhir), sd = sd(skor_akhir), n = n())
+
+rerata_tkda <- mean(sampel_tkda$skor_akhir)
+sd_tkda <- sd(sampel_tkda$skor_akhir)
+
+stat_tkda %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c("Rerata",
+                    "Simpangan Baku",
+                    "Frekuensi")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped",
+                                  "hold_position"), full_width = FALSE)
+```
+
+Selain itu, kita dapat melihat distribusi skor akhir dalam data sampel tersebut pada @fig-dist-sampel-tkda.
+
+```{r}
+#| label: fig-dist-sampel-tkda
+#| fig-cap: Distribusi skor akhir TKDA dalam data sampel.
+#| fig-asp: 0.5625
+
+sampel_tkda %>%
+  ggplot(aes(x = skor_akhir)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 binwidth = 5,
+                 col = "white") +
+  stat_density(geom = "area",
+               alpha = 0.5) +
+  geom_density() +
+  geom_vline(xintercept = rerata_tkda,
+             linewidth = 1) +
+  theme(axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  theme_bw() +
+  labs(x = "Skor TKDA")
+```
+
+Berdasarkan @tbl-stat-sampel-tkda dan @fig-dist-sampel-tkda kita melihat bahwa rerata skor akhir dalam data sampelnya lebih dari 160. Apakah skor akhir populasinya juga lebih dari 160? Pertanyaan seperti ini perlu dijawab dengan terlebih dahulu mengetahui distribusi sampling reratanya. Untuk itu kita perlu melakukan uji hipotesis.
+
+### Uji Kondisi
+
+Selanjutnya kita uji apakah sampel yang kita miliki memenuhi dua kondisi teknis uji $t$.
+
+Sebagai catatan, data `sampel_tkda` yang kita miliki diperoleh dari pengisian angket secara sukarela oleh para pelamar beasiswa. Dengan demikian, kondisi bebas tidak terpenuhi. Akan tetapi, untuk kepentingan demonstrasi, kita anggap sampel tersebut merupakan sampel yang representatif untuk populasinya, yaitu seluruh pelamar beasiswa tersebut.
+
+Berikutnya kita lihat apakah `sampel_tkda` berasar dari populasi yang berdistribusi normal. Ada dua cara untuk melakukannya, yaitu cara visual dan uji hipotesis. Untuk menggunakan cara pertama, kita dapat memanfaatkan diagram peluang normal [detailnya lihat @Kristanto2021a, pp. 38-44]. Diagram ini dapat dibuat dengan fungsi `ggqqplot` dalam paket {ggpubr}[^2]. Perhatikan @fig-diagram-QQ-tkda.
+
+[^2]: Paket {ggpubr} merupakan ekstensi dari paket {ggplot2} yang secara khusus mendedikasikan paketnya untuk membuat diagram-diagram yang siap untuk publikasi.
+
+```{r}
+#| label: fig-diagram-QQ-tkda
+#| fig-cap: Diagram QQ dengan selang kepercayaan 95% untuk data `sampel_tkda`.
+#| fig-asp: 0.5625
+
+sampel_tkda %>%
+  ggqqplot(x = "skor_akhir",
+           conf.int.level = 0.95,
+           xlab = "Teoretis",
+           ylab = "Sampel",
+           ggtheme = theme_bw())
+
+```
+
+Berdasarkan @fig-diagram-QQ-tkda dan dengan selang kepercayaan 0,95, semua titik-titik sampelnya berada dalam selang kepercayaan tersebut. Dengan demikian, kita dapat mengasumsikan bahwa `sampel_tkda` berasal dari populasi yang berdistribusi normal.
+
+Selain dengan menggunakan diagram peluang normal, kita dapat menggunakan uji normalitas. Salah satunya adalah uji Shapiro-Wilk. Di uji ini, hipotesis nolnya adalah bahwa sampelnya berasal dari populasi yang berdistribusi normal sedangkan hipotesis alternatifnya adalah bahwa sampelnya tidak berasal dari populasi yang berdistribusi normal.
+
+```{r}
+#| label: uji-normalitas-Kolmogorov-Smirnov
+#| code-fold: false
+
+uji_sw_tkda <- shapiro.test(sampel_tkda$skor_akhir)
+uji_sw_tkda
+
+```
+
+Karena diperoleh nilai-P yang cukup besar, yaitu `r round(uji_sw_tkda[[2]], 4)`, maka kita gagal menolak hipotesis nolnya. Kita dapat mengasumsikan bahwa sampel tersebut berasal dari populasi yang berdistribusi normal.
+
+::: {.callout-caution appearance="simple"}
+#### Hati-Hati!
+
+Kita tidak dapat membuktikan kebenaran hipotesis nol dengan menggunakan data sampel. Dengan demikian, ketika kita gagal menolak hipotesis nol bukan berarti hipotesis nol tersebut benar. Oleh karena itu, kesimpulan dalam uji Shapiro-Wilk tersebut menyatakan bahwa kita dapat mengasumsikan bahwa populasinya berdistribusi normal.
+:::
+
+Baik dengan menggunakan metode visual maupun uji Shapiro-Wilk, kita dapat mengasumsikan bahwa `sampel_tkda` berasal dari populasi yang berdistribusi normal. Dengan demikian, kita dapat lanjut menggunakan uji $t$.
+
+## Hipotesis Nol dan Alternatifnya
+
+Berdasarkan hipotesis awal peneliti yang akan diuji, kita dapat membentuk hipotesis nol dan hipotesis alternatif berikut.
+
+-   $H_0$: Rerata skor TKDA para pelamar beasiswa tersebut adalah 160 atau kalau kita simbolkan menjadi $\mu = 160$.
+
+-   $H_A$: Rerata skor TKDA para pelamar beasiswa tersebut lebih dari 160 atau $\mu > 160$.
+
+Hipotesis awal peneliti tersebut berada pada hipotesis alternatifnya. Dengan demikian, data sampel yang kita miliki nanti dapat digunakan untuk mendukungnya (atau tidak cukup untuk mendukungnya).
+
+Lebih lanjut, hipotesis alternatifnya membuat tanda lebih dari. Dengan demikian, uji hipotesis yang akan kita lakukan adalah uji ekor kanan.
+
+## Tingkat Signifikansi
+
+Kita akan menggunakan tingkat signifikansi $\alpha = \text{0,05}$ untuk melakukan uji hipotesis.
+
+## Variabilitas Statistik
+
+Dengan mengasumsikan bahwa hipotesis nol benar, yaitu $\mu = 160$, distribusi sampling reratanya mengikuti distribusi $t$ dengan derajat bebas yang dapat ditentukan dengan @eq-df-uji-t.
+
+$$
+\text{df} = n - 1
+$$ {#eq-df-uji-t}
+
+Dengan demikian, derajat bebasnya adalah $df = 25 - 1 = 24$. Distribusi sampling tersebut ditunjukkan pada @fig-dist-sampling-tkda.
+
+```{r}
+#| label: fig-dist-sampling-tkda
+#| fig-cap: Distribusi sampling $t$ untuk variabel `skor_akhir` dalam data `sampel_tkda`.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
+  stat_function(fun = dt,
+                args = list(df = 24),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "t")
+
+```
+
+## Statistik Uji dan Nilai-P
+
+Kita perlu menentukan statistik uji $t$ untuk mengetahui posisi rerata sampel kita dalam distribusi sampling pada @fig-dist-sampling-tkda. Statistik uji tersebut dihitung dengan @eq-stat-uji-t berikut.
+
+$$
+t = \frac{\bar{x} - \mu}{\frac{s}{\sqrt{n}}}
+$$ {#eq-stat-uji-t}
+
+```{r}
+#| label: stat-uji-t-tkda
+
+t_uji_tkda <- (rerata_tkda - 160)/(sd_tkda/sqrt(25))
+
+```
+
+Dengan menggunakan @eq-stat-uji-t tersebut, kita mendapatkan statistik uji $t$ sekitar `r round(t_uji_tkda, 2)`.
+
+Nilai-P merupakan peluang mendapatkan sampel seekstrem atau lebih ekstrem dari `sampel_tkda`. Nilainya direpresentasikan sebagai luas sebelah kanan statistik ujinya, perhatikan @fig-nilai-P-tkda.
+
+```{r}
+#| label: fig-nilai-P-tkda
+#| fig-cap: Nilai-P yang digambarkan sebagai luas daerah di sebelah kanan statistik uji $t$.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
+  stat_function(fun = dt,
+                args = list(df = 24),
+                geom = "area",
+                xlim = c(t_uji_tkda, 4),
+                fill = "red",
+                alpha = 0.6) +
+  annotate("segment", x = t_uji_tkda, y = 0,
+           xend = t_uji_tkda,
+           yend = dt(t_uji_tkda, 24)) +
+  stat_function(fun = dt,
+                args = list(df = 24),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "t")
+```
+
+Nilai-P tersebut dapat dihitung dengan menggunakan fungsi `pt` seperti berikut.
+
+```{r}
+#| label: nilai-P-tkda
+#| code-fold: false
+
+P_tkda <- pt(t_uji_tkda,
+             df = 24,
+             lower.tail = FALSE)
+P_tkda
+
+```
+
+Jadi, kita memperoleh nilai-P yang besarnya kurang lebih `r round(P_tkda, 4)`.
+
+## Kesimpulan dan Interpretasi
+
+Karena kita mendapatkan nilai-P sebesar `r round(P_tkda, 4)` yang kurang dari 0,05, kita tolak hipotesis nol. Jadi, terdapat cukup bukti untuk mendukung klaim yang menyatakan bahwa rerata skor TKDA para pelamar beasiswa tersebut lebih dari 160.
+
+# Selang Kepercayaan
+
+Untuk menjawab pertanyaan kedua, kita perlu membuat selang kepercayaan. Karena sebelumnya kita telah mengetahui bahwa `sampel_tkda` memenuhi dua kondisi teknis penggunaan distribusi $t$, kita dapat menggunakan distribusi tersebut untuk membuat selang kepercayaan. Kita akan buat selang kepercayaan dengan tingkat kepercayaan 95%.
+
+Selang kepercayaan tersebut menghimpun 95% nilai $t$ yang terletak di pusat distribusi samplingnya, perhatikan @fig-selang-kepercayaan-tkda, yang kemudian ditransformasikan agar berpusat di $\bar{x}$ dan simpangan bakunya $SE$.
+
+```{r}
+#| label: fig-selang-kepercayaan-tkda
+#| fig-cap: Daerah yang dibatasi oleh $-t_{\text{df}}^\star$ dan $t_{\text{df}}^\star$ yang luasnya 95%.
+#| fig-asp: 0.5625
+
+t_bintang_tkda <- qt(0.025,
+                     df = 24,
+                     lower.tail = FALSE)
+ggplot(data.frame(x = c(-4, 4)),
+       aes(x = x)) +
+  stat_function(fun = dt,
+                args = list(df = 24),
+                geom = "area",
+                xlim = c(-t_bintang_tkda,
+                         t_bintang_tkda),
+                fill = "blue",
+                alpha = 0.6) +
+  annotate("segment",
+           x = -t_bintang_tkda,
+           y = 0,
+           xend = -t_bintang_tkda,
+           yend = dt(-t_bintang_tkda, df = 24)) +
+  annotate("segment",
+           x = t_bintang_tkda,
+           y = 0,
+           xend = t_bintang_tkda,
+           yend = dt(t_bintang_tkda, df = 24)) +
+  annotate("segment",
+           x = -t_bintang_tkda,
+           y = 0.45,
+           xend = t_bintang_tkda,
+           yend = 0.45,
+           linewidth = 1) +
+  annotate("segment",
+           x = -t_bintang_tkda,
+           y = 0,
+           xend = -t_bintang_tkda,
+           yend = 0.45,
+           linetype = "dotted") +
+  annotate("segment",
+           x = t_bintang_tkda,
+           y = 0,
+           xend = t_bintang_tkda,
+           yend = 0.45,
+           linetype = "dotted") +
+  annotate("text", x = 0, y = 0.5,
+           label = "Luas 95%") +
+  stat_function(fun = dt,
+                args = list(df = 24),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "t")
+```
+
+Dengan demikian, selang kepercayaan tersebut dapat ditentukan dengan @eq-selang-kepercayaan-t.
+
+$$
+\begin{align*}
+\\ \text{estimasi titik} &\pm t_{\text{df}}^\star \cdot SE
+\\ \bar{x} &\pm t_{\text{df}}^\star \cdot \frac{s}{\sqrt{n}}
+\end{align*}
+$$ {#eq-selang-kepercayaan-t}
+
+Nilai kritis $t_{\text{df}}^\star$ dengan selang kepercayaan 95% dan $df = 24$ dapat ditentukan seperti berikut.
+
+```{r}
+#| code-fold: false
+#| label: t-bintang-tkda
+
+qt(0.025, df = 24, lower.tail = FALSE)
+
+```
+
+Dengan demikian, kita peroleh selang kepercayaannya adalah
+
+$$
+\text{171,8} \pm \text{10,49}
+$$
+
+Jadi, kita 95% yakin bahwa rerata skor TKDA para pelamar beasiswa tersebut berada dalam rentang $\text{171,8} \pm \text{10,49}$.
+
+# Uji $t$ dan Selang Kepercayaan
+
+Uji hipotesis yang telah kita lakukan sebelumnya dapat kita lakukan secara singkat dengan kode berikut.
+
+```{r}
+#| code-fold: false
+#| label: uji-t-tkda
+
+t.test(sampel_tkda$skor_akhir,
+       alternative = "greater",
+       mu = 160)
+```
+
+Pembuatan selang kepercayaan yang telah kita lakukan sebelumnya juga dapat dibuat dengan kode berikut.
+
+```{r}
+#| code-fold: false
+#| label: sk-tkda
+
+t.test(sampel_tkda$skor_akhir,
+       alternative = "two.sided",
+       mu = 160,
+       conf.level = 0.95)
+```
+
+Perhatikan bahwa dalam kode tersebut kita mengatur agar argumen `alternative` bernilai "two.sided". Selang kepercayaan yang kita peroleh tersebut kurang lebih sama dengan yang telah kita peroleh ketika menggunakan @eq-selang-kepercayaan-t.
+
+# Pelaporan
+
+Dalam penulisan karya tulis ilmiah, penting bagi kita untuk dapat melaporkan uji $t$ dan pembuatan selang kepercayaan tersebut dengan tepat. Berikut ini adalah contoh pelaporan tersebut.
+
+::: {style="background-color: #f2f2f2; padding: 10px;"}
+Uji $t$ satu sampel dilakukan untuk mengetahui apakah rerata skor TKDA para pelamar sebuah beasiswa lebih dari 160. Skor TKDA sampel dapat diasumsikan berasal dari populasi yang berdistribusi normal, seperti yang dinyatakan dalam diagram peluang normal dan uji Shapiro-Wilk (*p* \> .05). Skor TKDA para pelamar beasiswa tersebut (*M* = `r round(rerata_tkda, 2)`, *SD* = `r round(sd_tkda, 2)`) secara signifikan lebih dari 160, yaitu dengan *t*(24) = `r round(t_uji_tkda, 3)` dan *p* = `r round(P_tkda, 3)`.
+:::
+
+# Uji Nonparametrik yang Sejenis
+
+Kita telah menjawab pertanyaan awal yang pertama dengan menggunakan uji $t$ karena data sampel kita memenuhi dua kondisi uji tersebut. Bagaimana jika data kita tidak memenuhi salah satu kondisinya, yaitu kondisi normalitas? Kita dapat menggunakan uji nonparametrik alternatifnya, yaitu uji peringkat-bertanda Wilcoxon.
+
+Berbeda dengan uji $t$, uji peringkat-bertanda Wilcoxon ini menguji tentang median suatu populasi. Dengan demikian, jika kita menggunakan uji nonparametrik ini untuk menjawab pertanyaan awal yang pertama, hipotesis nol dan alternatifnya menjadi seperti ini.
+
+-   $H_0$: Median skor TKDA para pelamar beasiswa tersebut adalah 160.
+
+-   $H_A$: Mediannya lebih dari 160.
+
+Penjelasan detail tentang uji nonparametrik ini dapat dibaca sendiri di Kristanto [-@Kristanto2021b, pp. 228-233]. Kita dapat melakukan uji ini dengan menggunakan kode berikut.
+
+```{r}
+#| label: uji-Wilcoxon-tkda
+#| code-fold: false
+
+uji_W_tkda <- wilcox.test(sampel_tkda$skor_akhir,
+            mu = 160,
+            alternative = "greater")
+uji_W_tkda
+
+```
+
+Karena kita mendapatkan nilai-P kurang lebih sebesar `r round(uji_W_tkda[[3]], 3)`, kita tolak hipotesis nol. Dengan demikian, terdapat cukup bukti untuk mendukung klaim bahwa median skor TKDA para pelamar beasiswa tersebut lebih dari 160.
+
+# Latihan
+
+Seorang peneliti merekrut sampel acak berukuran *n* = 40 orang untuk berpartisipasi dalam penelitian tentang intervensi depresi. Peneliti mengukur tingkat depresi peserta sebelum penelitian hasilnya tercatat dalam `sampel_depresi`. Berdasarkan data tersebut, peneliti tersebut mednuga bahwa skor depresi sampelnya lebih rendah dibandingkan skor depresi populasi 'normal', yaitu sebesar 4,0. Dengan menggunakan tingkat signifikansi $\alpha = \text{0,05}$, ujilah dugaan peneliti tersebut!
+
+```{r}
+#| label: sampel-depresi
+#| code-fold: false
+
+sampel_depresi <- data.frame(
+  id = 1:40,
+  skor_depresi = c(4.48, 2.82, 4.82, 4.17, 3.47,
+                   3.04, 2.14, 4.16, 4.5, 3.89,
+                   4.81, 3.56, 2.79, 4.28, 4.18,
+                   5.26, 4.27, 4.14, 3.93, 4.54,
+                   4.09, 3.33, 3.71, 3.42, 3.92,
+                   3.92, 3.95, 3.35, 2.19, 2.86,
+                   3.64, 5.96, 2.99, 3.08, 4.64,
+                   3.95, 3.33, 3.55, 3.85, 3.01)
+)
+```
+
+# Daftar Rujukan
+
+::: {#refs}
+:::

@@ -1,0 +1,1874 @@
+---
+title: "Inferensi untuk Proporsi"
+format:
+  revealjs:
+    transition: fade
+    preview-links: true
+    logo: figs/logo-usd.png
+    footer: "STAT503 Metode Statistik"
+    controls: true
+    multiplex: true
+code-annotations: select
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+library(janitor)
+library(knitr)
+library(kableExtra)
+library(infer)
+library(scales)
+set.seed(503)
+```
+
+## Apa yang Akan Kita Jawab? {.smaller}
+
+-   Apakah 1 dari 2 perempuan di Indonesia yang berumur 20-24 tahun telah kawin sebelum umur 15 tahun? (Inferensi untuk **proporsi tunggal**.)
+
+-   Apakah terjadi penurunan persentase peserta didik jenjang SMA pedesaan yang mengakses internet setelah pandemi COVID-19? (Inferensi untuk membandingkan **dua proporsi**.)
+
+-   Jenis pertanyaan apa yang dapat mendorong penjual untuk mengungkapkan masalah barang yang dijualnya? (Inferensi untuk **tabel dua faktor**.)
+
+# Inferensi untuk Proporsi Tunggal
+
+Di bagian ini, kita akan membuat kesimpulan tentang proporsi tunggal.
+
+## Pertanyaan
+
+Pertanyaan yang akan kita jawab adalah sebagai berikut.
+
+> Apakah 1 dari 2 (50%) perempuan di Indonesia yang berumur 20-24 tahun telah kawin sebelum umur 15 tahun?
+
+Sekelompok peneliti menduga bahwa persentasenya sudah tidak sama dengan 50% di tahun 2022.
+
+## Hipotesis Nol dan Alternatifnya
+
+Berikut ini adalah hipotesis nol dan hipotesis alternatif yang sesuai dengan pertanyaan awal.
+
+-   $H_{0}$ : Sebesar 50% perempuan di Indonesia yang berumur 20-24 tahun telah kawin sebelum umur 15 tahun, yaitu $p=0,5$.
+
+-   $H_{A}$: Persentase perempuan di Indonesia yang berumur 20-24 tahun telah kawin sebelum umur 15 tahun bukanlah 50%, yaitu $p \neq 0,5$.
+
+## Data dan Konteksnya
+
+Sebuah studi pada tahun 2020 mengungkap bahwa 1 dari 2 perempuan di Indonesia yang berusia 20-24 tahun telah kawin (tercatat ataupun tidak) sebelum mereka berumur 15 tahun [@hastuti2022].
+
+Sekelompok peneliti yakin bahwa hal tersebut sudah tidak benar pada tahun 2022. Mereka mensurvei 348 perempuan di Indonesia dalam kelompok umur yang sama dan mendapati bahwa 160 di antaranya telah kawin sebelum mereka berumur 15 tahun.
+
+## Eksplorasi Data
+
+@fig-stat-perempuan-kawin-2022 menunjukkan bahwa persentase perempuan yang telah menikah sebelum berusia 15 tahun dalam sampel tersebut kurang dari 50%. Tepatnya, proporsinya adalah $\hat {p} \approx 0,46$.
+
+```{r}
+#| label: fig-stat-perempuan-kawin-2022
+#| echo: false
+#| fig-cap: Visualisasi proporsi perempuan berusia 20-24 tahun yang telah menikah sebelum berusia 15 tahun.
+#| fig-asp: 0.3
+
+sampel_kwn15 <- data.frame(
+  id = 1:348,
+  kawin_bawah15thn = c(rep("Ya", 160),
+                       rep("Tidak", 348-160))
+)
+
+p_topi_kwn15 <- 160/348
+
+sampel_kwn15 %>%
+  ggplot(aes(y = factor(1), fill = kawin_bawah15thn)) +
+  geom_bar() +
+  theme(axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  scale_x_continuous(labels =
+                       label_percent(scale = 100/348),
+                     breaks = seq(0, 348, 348/4)) +
+  labs(fill = "Kawin Sebelum\n15 Tahun",
+       x = "Persentase")
+
+```
+
+## Variabilitas Statistik
+
+@fig-dist-sampling-kwn15 memvisualisasikan variabilitas statistik, yaitu proporsi, dari sampel ke sampel yang berukuran 348 ketika diasumsikan proporsi populasinya $p = \text{0,5}$.
+
+```{r}
+#| label: fig-dist-sampling-kwn15
+#| echo: false
+#| warning: false
+#| fig-cap: Distribusi sampling hasil simulasi dengan mengasumsikan $H_{0}$ benar.
+#| fig-asp: 0.5
+
+set.seed(503)
+dist_sampling_kwn15 <- sampel_kwn15 %>%
+  specify(response = kawin_bawah15thn,
+          success = "Ya") %>%
+  hypothesise(null = "point", p = 0.5) %>%
+  generate(reps = 10000, type = "draw") %>%
+  calculate(stat = "prop")
+
+SE_sim_kwn15 <- sd(dist_sampling_kwn15$stat)
+SE_teor_kwn15 <- sqrt(0.5*(1-0.5)/348)
+
+visualise(dist_sampling_kwn15, bins = 15) +
+  stat_function(fun = function(x)
+    dnorm(x, mean = 0.5,
+          sd = SE_teor_kwn15)*0.013*10000,
+    linewidth = 1) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "Proporsi sampel",
+       title = "")
+```
+
+## Galat Standar untuk Proporsi Tunggal
+
+Ketika kondisi-kondisi tertentu terpenuhi, distribusi sampling $\hat {p}$ mendekati normal yang simpangan bakunya
+
+$$
+SE = \sqrt{\frac{p \left ( 1-p \right )}{n}}
+$$
+
+Dengan rumus ini, diperoleh $SE \approx \text{0,027}$. Nilai $SE$ ini dekat dengan simpangan baku distribusi sampling hasil simulasi, yaitu `r round(SE_sim_kwn15,3)`.
+
+## Nilai-P {.smaller}
+
+Berapakah peluang mendapatkan sampel yang dimiliki kelompok peneliti tersebut (dengan $\hat {p} \approx \text{0,46}$ dan $n = 348$) ketika diasumsikan populasinya memiliki $p=\text{0,5}$? Perhatikan @fig-P-sim-teor-kwn15.
+
+::: {#fig-P-sim-teor-kwn15 layout-ncol="2"}
+```{r}
+#| echo: false
+#| label: fig-P-sim-kwn15
+#| fig-cap: Nilai-P yang diperoleh dari distribusi sampling simulasi.
+#| fig-asp: 0.5
+
+visualise(dist_sampling_kwn15, bins = 15) +
+  shade_p_value(obs_stat = p_topi_kwn15,
+                direction = "two-sided") +
+  stat_function(fun = function(x)
+    dnorm(x, mean = 0.5,
+          sd = SE_teor_kwn15)*0.013*10000,
+    linewidth = 1) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "Proporsi sampel",
+       title = "")
+```
+
+```{r}
+#| echo: false
+#| label: fig-P-teor-kwn15
+#| fig-cap: Nilai-P yang diperoleh dari distribusi sampling teoretis.
+#| fig-asp: 0.5
+
+z_kwn15 <- (p_topi_kwn15 - 0.5)/SE_teor_kwn15
+
+ggplot(data.frame(x = c(-4,4)),
+       aes(x = x)) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                xlim = c(-4, z_kwn15),
+                geom = "area",
+                fill = "pink",
+                alpha = .8) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                xlim = c(-z_kwn15, 4),
+                geom = "area",
+                fill = "pink",
+                alpha = .8) +
+  geom_segment(aes(x = z_kwn15, y = 0,
+                   xend = z_kwn15,
+                   yend = dnorm(z_kwn15,
+                                mean = 0,
+                                sd = 1)),
+               col = "red",
+               linewidth = 1.5) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                linewidth = 1) +
+  geom_hline(yintercept = 0,
+             linewidth = 1) +
+  labs(x = "Skor z") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+
+Nilai-P yang diperoleh dari distribusi sampling simulasi dan model teoretisnya.
+:::
+
+## Nilai-P (2) {.smaller}
+
+Bagaimana cara menentukan statistik uji *z*? Statistik uji ini merepresentasikan rasio dari seberapa jauh proporsi sampelnya dari hipotesis proporsi populasinya dibandingkan dengan variabilitas nilai-nilai $\hat {p}$.
+
+$$
+z = \frac {\hat {p}-p_{0}}{SE}
+$$
+
+Dengan rumus tersebut diperoleh statistik uji `r round(z_kwn15, 2)`.
+
+## Nilai-P (3)
+
+::: columns
+::: {.column width="50%"}
+Berdasarkan simulasi, kita mendapatkan nilai-*P* seperti berikut.
+
+```{r}
+#| echo: true
+
+P_sim_kwn15 <- dist_sampling_kwn15 %>%
+  get_p_value(obs_stat = p_topi_kwn15,
+              direction = "two-sided")
+P_sim_kwn15
+```
+:::
+
+::: {.column width="50%"}
+Dengan menggunakan pendekatan distribusi normal, nilai-*P* diperoleh dengan cara berikut.
+
+```{r}
+#| echo: true
+
+P_teor_kwn15 <- 2*pnorm(z_kwn15,
+                        mean = 0,
+                        sd = 1,
+                        lower.tail = TRUE)
+P_teor_kwn15
+```
+:::
+:::
+
+## Kesimpulan dan Interpretasi
+
+Dengan mengasumsikan $p=0,5$, peluang untuk mendapatkan sampel kelompok peneliti tersebut adalah sekitar `r round(P_teor_kwn15, 3)`. Peluang ini cukup besar jika kita menggunakan tingkat signifikansi $\alpha=\textrm{0,05}$.
+
+Dengan demikian, **tidak cukup bukti** untuk mendukung bahwa proporsi perempuan Indonesia berusia 20-24 tahun yang telah menikah sebelum berusia 15 tahun tidak sama dengan 0,5 (atau 50%).
+
+## Selang Kepercayaan
+
+Jika estimasi titiknya mengikuti model normal dengan galat standar $SE$, selang kepercayaan untuk parameter populasinya adalah
+
+$$
+\textrm{estimasi titik} \pm z^\star \cdot SE
+$$ {#eq-sk}
+
+Ketika parameter yang diestimasi adalah $p$, maka selang kepercayaannya menjadi
+
+$$
+\hat {p} \pm z^\star \cdot SE
+$$
+
+dengan $z^\star$ bersesuaian dengan tingkat kepercayaan yang dipilih.
+
+::: {.callout-note appearance="minimal"}
+Ingat, nilai $z^\star \times SE$ merupakan pias galat atau *margin of error*.
+:::
+
+## Nilai $z^{\star}$ dan Tingkat Kepercayaan
+
+```{r}
+#| echo: false
+#| label: fig-kurva-norm-sk-95-99
+#| fig-cap: Nilai-nilai $z^{\star}$ yang membuat selang kepercayaan 90%, 95%, dan 99%. Nilai-nilai $z^{\star}$ tersebut secara berturut-turut adalah 1,64, 1,96, dan 2,58.
+#| fig-asp: 0.5
+
+ggplot(data.frame(x = c(-4, 4)),
+       aes(x = x)) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0, sd = 1),
+                xlim = c(-2.58, 2.58),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .4) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0, sd = 1),
+                xlim = c(-1.96, 1.96),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .4) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0, sd = 1),
+                xlim = c(-1.64, 1.64),
+                geom = "area",
+                fill = "#1f78b4",
+                alpha = .4) +
+  geom_hline(yintercept = 0,
+             linewidth = 0.5) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0, sd = 1),
+                linewidth = 1) +
+  geom_segment(aes(x = -1.64, y = 0,
+                   xend = -1.64, yend = 0.5),
+               linewidth = 0.5,
+               linetype = "dashed") +
+  geom_segment(aes(x = 1.64, y = 0,
+                   xend = 1.64, yend = 0.5),
+               linewidth = 0.5,
+               linetype = "dashed") +
+  geom_segment(aes(x = -1.96, y = 0,
+                   xend = -1.96, yend = 0.6),
+               linewidth = 0.5,
+               linetype = "dashed") +
+  geom_segment(aes(x = 1.96, y = 0,
+                   xend = 1.96, yend = 0.6),
+               linewidth = 0.5,
+               linetype = "dashed") +
+  geom_segment(aes(x = -2.58, y = 0,
+                   xend = -2.58, yend = 0.7),
+               linewidth = 0.5,
+               linetype = "dashed") +
+  geom_segment(aes(x = 2.58, y = 0,
+                   xend = 2.58, yend = 0.7),
+               linewidth = 0.5,
+               linetype = "dashed") +
+  geom_segment(aes(x = -1.64, y = 0.5,
+                   xend = 1.64, yend = 0.5),
+               linewidth = 1) +
+  geom_segment(aes(x = -1.96, y = 0.6,
+                   xend = 1.96, yend = 0.6),
+               linewidth = 1) +
+  geom_segment(aes(x = -2.58, y = 0.7,
+                   xend = 2.58, yend = 0.7),
+               linewidth = 1) +
+  annotate("text", x = 0, y = 0.54,
+           label = "Luas 90%")+
+  annotate("text", x = 0, y = 0.64,
+           label = "Luas 95%")+
+  annotate("text", x = 0, y = 0.74,
+           label = "Luas 99%") +
+  labs(x = "Skor z") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+
+## Galat Standar untuk Selang Kepercayaan
+
+Ketika menentukan selang kepercayaan, proporsi populasi $p$ tidak diketahui sehingga kita menggunakan estimasi titiknya, yaitu $\hat {p}$. Dengan demikian, galat standarnya adalah
+
+$$
+SE = \sqrt{\frac {\hat {p} \left ( 1 - \hat {p} \right )}{n}}
+$$
+
+## Selang Kepercayaan untuk Perkawinan di Bawah Umur
+
+Untuk tingkat kepercayaan 95%, nilai $z^{\star} \approx 1,96$. Dengan $\hat {p} \approx 0,46$ dan $n = 348$, kita dapatkan galat standarnya
+
+$$
+SE = \sqrt{\frac {\hat {p} \left ( 1 - \hat {p} \right )}{n}} \approx \sqrt{\frac {0,46 \cdot \left ( 1 - 0,46 \right )}{348}} \approx 0,027
+$$
+
+Dengan demikian, pias galatnya sekitar $1,96 \cdot 0,027 \approx 0,053$. Jadi, proporsi perempuan Indonesia dengan usia 20-24 tahun yang telah menikah sebelum 15 tahun adalah $0,46 \pm 0,053$.
+
+## Metode Lain
+
+Kita dapat menggunakan fungsi `prop.test` untuk melakukan uji hipotesis tentang proporsi.
+
+```{r}
+#| echo: true
+
+prop.test(x = 160,
+          n = 348,
+          p = 0.5,
+          alternative = "two.sided",
+          conf.level = 0.95,
+          correct = FALSE)
+
+```
+
+## Kondisi
+
+Berikut ini adalah kondisi-kondisi yang perlu terpenuhi agar variabilitasi $\hat {p}$ mengikuti model normal.
+
+-   **Observasi-observasinya bebas.** Sampel acak menjamin kondisi ini.
+
+-   **Sampelnya besar**, yaitu paling tidak terdapat 10 sukses dan 10 gagal.
+
+## Latihan 2.1
+
+Sebuah tim peneliti ingin mengetahui apakah persentase penduduk Indonesia yang hidup di bawah garis kemiskinan nasional kurang dari 10%. Jika tim peneliti tersebut ingin menjawabnya dengan menggunakan uji hipotesis, tentukan $H_{0}$ dan $H_{A}$.
+
+## Latihan 2.2 {.smaller}
+
+Untuk menjawab pertanyaan penelitiannya, tim peneliti pada Latihan 2.1 mensurvei 574 penduduk Indonesia secara acak dan 54 di antaranya berada di bawah garis kemiskinan nasional (diadaptasi dari @hastuti2022).
+
+1.  Lakukan uji hipotesis dengan tingkat signifikansi $\alpha = 0,05$ untuk menjawab pertanyaan tim peneliti tersebut pada Latihan 2.1!
+
+2.  Dengan menggunakan sampel tim peneliti tersebut, estimasilah persentase penduduk Indonesia yang hidup di bawah garis kemiskinan nasional! Gunakan tingkat kepercayaan 95%.
+
+# Inferensi untuk Membandingkan Dua Proporsi
+
+Ayo kita membuat inferensi untuk membandingkan dua proporsi.
+
+## Pertanyaan 1
+
+Di bagian ini, kita akan menjawab pertanyaan berikut.
+
+> Apakah terjadi penurunan persentase peserta didik jenjang SMA pedesaan yang mengakses internet setelah pandemi COVID-19?
+
+Sebuah tim peneliti menduga bahwa terdapat penurunan persentase peserta didik jenjang SMA pedesaan yang mengakses internet setelah pandemi COVID-19, khususnya dari tahun 2021 ke 2022.
+
+## Hipotesis Nol dan Alternatifnya {.smaller}
+
+Hipotesis nol dan hipotesis alternatif dari pertanyaan awal tadi adalah sebagai berikut.
+
+-   $H_{0}$: Tidak ada penurunan persentase peserta didik jenjang SMA pedesaan yang mengakses internet setelah pandemi COVID-19, yaitu dari tahun 2021 ($p_{1}$) ke 2022 ($p_{2}$). Hal ini disimbolkan dengan $p_{1} = p_{2}$ atau $p_{1} - p_{2} = 0$.
+
+-   $H_{A}$: Terdapat penurunan persentase peserta didik jenjang SMA pedesaan yang mengakses internet setelah pandemi COVID-19, yaitu dari tahun 2021 ke 2022. Dengan kata lain, $p_{1} > p_{2}$ atau $p_{1}-p_{2} > 0$.
+
+Kita pilih tingkat signifikansi $\alpha = 0,05$ untuk melakukan uji hipotesis. Dengan kata lain, kita memberikan ruang sebesar itu untuk galat jenis 1 (penolakan $H_{0}$ ketika hipotesis tersebut nyatanya benar).
+
+## Data dan Konteksnya {#sec-data-konteks-akses-internet-sma .smaller}
+
+Sebuah tim peneliti melakukan dua kali survei, yaitu pada tahun 2021 dan 2022, terhadap peserta didik jenjang SMA. Tim tersebut mendapatkan data sampel acak yang diringkas dalam @tbl-akses-internet-sma-pedesaan. Data tersebut diadaptasi dari @sutarsih2022.
+
+```{r}
+#| label: tbl-akses-internet-sma-pedesaan
+#| echo: false
+#| tbl-cap: Ringkasan data sampel akses internet peserta didik jenjang SMA.
+
+intrnt_desaSMA <- data.frame(
+  id = 1:408,
+  tahun = c(rep("2021", 198),
+            rep("2022", 210)),
+  akses_internet = c(rep("Ya", 64),
+                     rep("Tidak", 134),
+                     rep("Ya", 66),
+                     rep("Tidak", 144))
+)
+
+intrnt_desaSMA %>%
+  count(tahun, akses_internet) %>%
+  pivot_wider(names_from = tahun,
+              values_from = n) %>%
+  mutate(
+    "Mengakses internet 3 bulan terakhir" = akses_internet
+  ) %>%
+  select("Mengakses internet 3 bulan terakhir", "2021", "2022") %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = T) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = T) %>%
+  add_header_above(c(" " = 1, "Tahun" = 2, " " = 1)) %>%
+  column_spec(column = 1, width = "70%") %>%
+  column_spec(column = 2:4, width = "10%")
+
+```
+
+## Eksplorasi Data
+
+@fig-proporsi-akses-internet-sma-pedesaan menunjukkan bahwa proporsi akses internet pada tahun 2022 sedikit lebih kecil dibandingkan pada tahun 2021.
+
+```{r}
+#| label: fig-proporsi-akses-internet-sma-pedesaan
+#| echo: false
+#| fig-cap: Diagram batang untuk proporsi peserta didik SMA yang mengakses internet dalam tiga bulan terakhir.
+#| fig-asp: 0.3
+
+ggplot(intrnt_desaSMA,
+       aes(y = factor(tahun), fill = akses_internet)) +
+  geom_bar(position = "fill") +
+  scale_x_continuous(labels = label_percent()) +
+  labs(x = "Proporsi",
+       y = "Tahun",
+       fill = "Mengakses internet\n3 bulan terakhir")
+
+```
+
+## Eksplorasi Data (2)
+
+Selisih proporsi peserta didik jenjang SMA di pedesaan yang mengakses internet pada tahun 2021 dan 2022 adalah sebagai berikut.
+
+$$
+\hat {p}_{1} - \hat {p}_{2} = \frac {64}{198} - \frac {66}{210} \approx \textrm {0,01}
+$$
+
+## Variabilitas Statistik untuk Membandingkan Dua Proporsi
+
+Distribusi sampling simulasi untuk selisih $\hat {p}_{1}$ dan $\hat {p}_{2}$ ditunjukkan pada. Distribusi tersebut mendekati normal sehingga dapat dimodelkan dengan distribusi normal.
+
+```{r}
+#| label: fig-dist-sampling-sim-teor-akses-internet-SMA
+#| fig-cap: Distribusi sampling hasil simulasi dan kurva normal yang sesuai.
+#| fig-asp: 0.5
+
+set.seed(503)
+dist_sampling_aksesIntrntSMA <- intrnt_desaSMA %>%
+  specify(akses_internet ~ tahun, success = "Ya") %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 10000, type = "permute") %>%
+  calculate(stat = "diff in props",
+            order = c("2021", "2022"))
+
+SE_teor_aksesIntrntSMA <- sqrt(130/408*(1-130/408)*(1/198+1/210))
+selisih_prop_aksesIntrntSMA <- 64/198 - 66/210
+z_aksesIntrntSMA <- (selisih_prop_aksesIntrntSMA - 0)/SE_teor_aksesIntrntSMA
+
+visualise(dist_sampling_aksesIntrntSMA) +
+  stat_function(fun = function(x)
+    dnorm(x, mean = 0,
+          sd = SE_teor_aksesIntrntSMA)*252.3191,
+    linewidth = 1,
+    xlim = c(-0.2,0.2)) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "Selisih proporsi",
+       title = "")
+```
+
+## Galat Standar Selisih Proporsi
+
+Kurva normal pada salindia sebelumnya memiliki pusat di $p_{1}-p_{2} = 0$, sesuai dengan hipotesis nolnya, dan galat standar yang dihitung dengan @eq-se-selisih-prop.
+
+$$
+SE = \sqrt {\frac {p_{1}\left ( 1 - p_{1} \right )}{n_{1}} + \frac {p_{2}\left ( 1 - p_{2} \right )}{n_{2}}}
+$$ {#eq-se-selisih-prop}
+
+## Galat Standar Selisih Proporsi (2) {.smaller}
+
+Jika $p_{1}-p_{2} = 0$ atau $p_{1}=p_{2}$, kita gunakan proporsi gabungan, $\hat {p}_{\textrm{gabung}}$, untuk mengestimasi $p_{1}$ dan $p_{2}$ dalam @eq-se-selisih-prop. Proporsi gabungan tersebut ditentukan dengan cara berikut ini.
+
+$$
+\hat {p}_{\textrm {gabung}} = \frac {\textrm {banyaknya sukses}}{\textrm {banyaknya kasus}} = \frac {\hat {p}_{1} n_{1} + \hat {p}_{2} n_{2}}{n_{1} + n_{2}}
+$$ {#eq-prop-gabungan}
+
+Dengan demikian, galat standarnya menjadi seperti dalam @eq-est-se-selisih-prop-gabung.
+
+$$
+SE \approx \sqrt {\hat {p}_{\textrm {gabung}}\left (1 - \hat {p}_{\textrm {gabung}} \right ) \left ( \frac {1}{n_{1}} + \frac {1}{n_{2}} \right )}
+$$ {#eq-est-se-selisih-prop-gabung}
+
+Dengan menggunakan @eq-prop-gabungan dan @eq-est-se-selisih-prop-gabung, serta $\hat {p}_{1} = 64/198$, $\hat {p}_{2} = 66/210$, $n_{1} = 198$ dan $n_{2} = 210$, kita peroleh $SE \approx \textrm{0,046}$.
+
+## Statistik Uji
+
+Statistik ujinya dapat ditentukan dengan @eq-stat-uji-selisih-prop.
+
+$$
+z = \frac {\left ( \hat {p}_{1} - \hat {p}_{2} \right ) - \left ( p_{1} - p_{2} \right )}{SE}
+$$ {#eq-stat-uji-selisih-prop}
+
+Dari @eq-stat-uji-selisih-prop, kita peroleh $z \approx \textrm {0,194}$.
+
+## Nilai-*P* {.smaller}
+
+::: columns
+::: {.column width="40%"}
+Nilai-*P* ditunjukkan sebagai luas daerah daerah yang diarsir pada @fig-P-teor-akses-intrnt-SMA. Nilai-*P* tersebut dapat dihitung seperti berikut.
+
+```{r}
+#| echo: true
+
+P_teor_aksesIntrntSMA <-
+  pnorm(z_aksesIntrntSMA,
+      mean = 0,
+      sd = 1,
+      lower.tail = FALSE)
+P_teor_aksesIntrntSMA
+```
+:::
+
+::: {.column width="60%"}
+```{r}
+#| label: fig-P-teor-akses-intrnt-SMA
+#| echo: false
+#| fig-cap: Nilai-P sebagai luas daerah di sebelah kanan $z \approx \textrm {0,194}$.
+#| fig-asp: 0.75
+
+ggplot(data.frame(x = c(-4,4)),
+       aes(x = x)) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                linewidth = 1,
+                geom = "area",
+                xlim = c(z_aksesIntrntSMA, 4),
+                fill = "pink",
+                alpha = 0.8) +
+  geom_hline(yintercept = 0,
+             linewidth = 1) +
+  geom_segment(aes(x = z_aksesIntrntSMA, y = 0,
+                   xend = z_aksesIntrntSMA,
+                   yend = dnorm(z_aksesIntrntSMA, mean = 0, sd = 1))) +
+  stat_function(fun = dnorm,
+                args = list(mean = 0,
+                            sd = 1),
+                linewidth = 2) +
+  theme(axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(x = "Skor z")
+```
+:::
+:::
+
+## Kesimpulan dan Interpretasi
+
+Karena nilai-*P* lebih dari 0,05, maka kita gagal menolak $H_{0}$. Jadi, data sampel tim peneliti tersebut tidak menjadi bukti yang cukup untuk mendukung klaim bahwa terdapat penurunan persentase peserta didik jenjang SMA di pedesaan yang mengakses internet dari tahun 2021 ke 2022.
+
+## Pertanyaan 2
+
+Hasil uji hipotesis sebelumnya tidak menunjukkan adanya penurunan persentase peserta didik jenjang SMA pedesaan yang mengakses internet dari tahun 2021 ke 2022. Sekarang kita estimasi selisihnya.
+
+> Seberapa besar selisih persentase peserta didik jenjang SMA pedesaan yang mengakses internet dari tahun 2021 ke 2022?
+
+Pertanyaan tersebut akan kita jawab dengan data sampel pada @sec-data-konteks-akses-internet-sma, serta menggunakan selang kepercayaan 95% yang diperoleh dari metode bootstrap dan model matematis.
+
+## Selang Kepercayaan Bootstrap
+
+Bagaimana cara kerja metode bootstrap untuk membandingkan dua proporsi? Silakan lihat @fig-boot-prop-2!
+
+![Ilustrasi bagaimana metode bootstrap digunakan untuk membuat distribusi sampling simulasi.](figs/bootstrap-2-proporsi-01.png){#fig-boot-prop-2}
+
+## Variabilitas Statistik Sampel-Sampel Bootstrap
+
+Variabilitas $\hat {p}_{1} - \hat {p}_{2}$ untuk 10.000 pasangan sampel bootstrap ditunjukkan pada @fig-dist-boot-intrnt-desa-sma.
+
+```{r}
+#| label: fig-dist-boot-intrnt-desa-sma
+#| fig-cap: Distribusi bootsrap hasil simulasi selisih proporsi dari 10.000 sampel.
+#| fig-asp: 0.3
+
+dist_boot_intrnt_desaSMA <- intrnt_desaSMA %>%
+  specify(akses_internet ~ tahun, success = "Ya") %>%
+  generate(reps = 10000, type = "bootstrap") %>%
+  calculate(stat = "diff in props",
+            order = c("2021", "2022"))
+
+SE_dist_boot_intrnt_desaSMA <- sd(dist_boot_intrnt_desaSMA$stat)
+
+visualise(dist_boot_intrnt_desaSMA) +
+  labs(x = "Selisih proporsi",
+       y = "Frekuensi",
+       title = "")
+```
+
+## Persentil Bootstrap vs. Selang Kepercayaan SE
+
+Selang kepercayaan yang kita inginkan dapat ditentukan dengan dua cara sebagai berikut.
+
+-   **Persentil bootstrap.** Hal ini seperti yang kita lakukan pada topik Landasan Inferensi.
+
+-   **Selang Kepercayaan** $SE$**.** Kita lakukan estimasi dengan menggunakan $SE$ untuk menghimpun 95% kemungkinan-kemungkinan statistiknya.
+
+## Persentil Bootstrap
+
+```{r}
+#| include: false
+pstl_sk_intrnt_desaSMA <-
+  get_ci(dist_boot_intrnt_desaSMA,
+         level = 0.95)
+```
+
+Persentil ke-2,5 dan 97,5 dari distribusi bootstrapnya ditunjukkan pada @fig-sk-pstl-intrnt-desa-sma. Dengan demikian, selang kepercayaan 95% yang kita peroleh adalah (`r round(pstl_sk_intrnt_desaSMA[1,1], 4)*100`%, `r round(pstl_sk_intrnt_desaSMA[1,2], 4)*100`%).
+
+```{r}
+#| label: fig-sk-pstl-intrnt-desa-sma
+#| echo: false
+#| fig-cap: Selang kepercayaan 95% yang diperoleh dengan menghimpun statistik-statistik yang terletak di antara persentil ke-2,5 dan 97,5.
+#| fig-asp: 0.3
+
+visualise(dist_boot_intrnt_desaSMA) +
+  shade_confidence_interval(endpoints = pstl_sk_intrnt_desaSMA) +
+  labs(x = "Selisih proporsi",
+       y = "Frekuensi",
+       title = "")
+```
+
+## Selang Kepercayaan SE
+
+Dengan mengasumsikan bahwa distribusi bootstrapnya mendekati normal, 95% statistik-statistiknya berada dalam $\left ( \hat{p}_{1} - \hat{p}_{2} \right ) \pm \textrm {1,96} \cdot SE$. Dengan menghitung simpangan baku dari statistik-statistik dalam distribusi bootstrapnya, kita peroleh galat standarnya
+
+```{r}
+#| include: false
+
+sk_SE_intrnt_desaSMA <- data.frame(
+  batas_bawah = selisih_prop_aksesIntrntSMA - qnorm(0.975)*SE_dist_boot_intrnt_desaSMA,
+  batas_atas = selisih_prop_aksesIntrntSMA + qnorm(0.975)*SE_dist_boot_intrnt_desaSMA
+)
+```
+
+$$
+SE \approx \textrm{0,047}
+$$
+
+Dengan demikian, selang kepercayaannya adalah (`r round(sk_SE_intrnt_desaSMA[1,1],4)*100`%, `r round(sk_SE_intrnt_desaSMA[1,2],4)*100`%).
+
+## Selang Kepercayaan SE (2)
+
+@fig-sk-se-intrnt-desa-sma menunjukkan selang kepercayaan $SE$ sebagai daerah yang diarsir.
+
+```{r}
+#| echo: false
+#| label: fig-sk-se-intrnt-desa-sma
+#| fig-cap: Selang kepercayaan yang kurang lebih menghimpun 95% statistik-statistik dalam distribusi bootstrap, yaitu mulai dari -0,0822 sampai dengan 0,1001.
+#| fig-asp: 0.3
+
+visualise(dist_boot_intrnt_desaSMA) +
+  shade_confidence_interval(endpoints = sk_SE_intrnt_desaSMA) +
+  labs(x = "Selisih proporsi",
+       y = "Frekuensi",
+       title = "")
+```
+
+## Selang Kepercayaan dengan Model Matematis
+
+Berdasarkan bentuk distribusi sampling hasil simulasi pada @fig-dist-boot-intrnt-desa-sma, kita dapat mendekatinya dengan distribusi normal. Galat standar distribusi normal tersebut dihitung dengan @eq-se-selisih-prop, tetapi dengan mendekati parameter-parameter populasinya dengan statistik-statistik sampel.
+
+$$
+SE \approx \sqrt {\frac {\hat {p}_{1}\left ( 1 - \hat {p}_{1} \right )}{n_{1}} + \frac {\hat {p}_{2}\left ( 1 - \hat {p}_{2} \right )}{n_{2}}}
+$$ {#eq-est-se-selisih-prop}
+
+```{r}
+#| include: false
+
+SE_teor_sk_intrntDesaSMA <-
+  sqrt((64/198)*(1-64/198)/198 + (66/210)*(1-66/210)/210)
+```
+
+Kita gunakan @eq-est-se-selisih-prop dan memperoleh $SE$-nya sekitar `r round(SE_teor_sk_intrntDesaSMA, 3)`.
+
+## Selang Kepercayaan dengan Model Matematis (2)
+
+Selang kepercayaan untuk mengestimasi selisih proporsi juga ditentukan dengan @eq-sk. Karena yang diestimasi adalah $p_{1} - p_{2}$, maka selang kepercayaannya adalah
+
+$$
+\left ( \hat {p}_{1} - \hat {p}_{2} \right ) \pm z^{\star} \cdot SE
+$$ {#eq-sk-selisih-prop}
+
+Nilai $z^{\star}$ tergantung pada tingkat kepercayaan yang dipilih, lihat kembali @fig-kurva-norm-sk-95-99.
+
+## Selang Kepercayaan 95% {.smaller}
+
+::: columns
+::: {.column width="50%"}
+Karena $\hat{p}_{1} - \hat{p}_2 \approx \textrm{0,0089} = \textrm{0,89%}$ dan $SE \approx \textrm{0,04616} = \textrm{4,616%}$, maka selang kepercayaannya adalah $\textrm{0,89%} \pm \textrm{1,96} \cdot \textrm{4,616%}$ atau $\textrm{0,89%} \pm \textrm{9,048%}$. Selang kepercayaan ini ditunjukkan pada @fig-sk-teor-intrnt-desa-sma.
+
+Jadi, selisih antara persentase peserta didik SMA di pedesaan yang mengakses internet pada tahun 2021 dan 2022 adalah $\textrm{0,89%} \pm \textrm{9,048%}$.
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+#| label: fig-sk-teor-intrnt-desa-sma
+#| fig-cap: Selang kepercayaan 95% dari selisih persentase peserta didik SMA di pedesaan yang mengakses internet 3 bulan terakhir di tahun 2021 dan 2022.
+#| fig-asp: 0.75
+
+ggplot(data.frame(x = c(-0.2,0.2)),
+       aes(x = x)) +
+  stat_function(fun = dnorm,
+                args = list(mean = selisih_prop_aksesIntrntSMA,
+                            sd = SE_teor_sk_intrntDesaSMA),
+                linewidth = 1,
+                geom = "area",
+                xlim = c(selisih_prop_aksesIntrntSMA - qnorm(0.975)*SE_teor_sk_intrntDesaSMA,selisih_prop_aksesIntrntSMA + qnorm(0.975)*SE_teor_sk_intrntDesaSMA),
+                fill = "#1f78b4",
+                alpha = 0.8) +
+  geom_hline(yintercept = 0,
+             linewidth = 0.75) +
+  stat_function(fun = dnorm,
+                args = list(mean = selisih_prop_aksesIntrntSMA,
+                            sd = SE_teor_sk_intrntDesaSMA),
+                linewidth = 1) +
+  scale_x_continuous(labels = label_percent()) +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "Selisih proporsi")
+```
+:::
+:::
+
+## Kondisi
+
+Selisih $\hat{p}_{1} - \hat{p}_{2}$ dapat dimodelkan dengan distribusi normal jika memenuhi dua kondisi berikut.
+
+-   *Bebas*. Datanya bebas, baik di dalam tiap-tiap sampel atau antar sampel.
+
+-   *Kondisi sukses dan gagal.* Data di tiap sampel paling tidak berisi 10 sukses dan 10 gagal.
+
+## Metode Lain
+
+Seperti yang kita lakukan pada uji hipotesis proporsi tunggal, kita juga dapat menggunakan fungsi `prop.test` untuk melakukan uji hipotesis tentang dua proporsi.
+
+```{r}
+#| echo: true
+
+prop.test(x = c(64,66),
+          n = c(198,210),
+          alternative = "greater",
+          conf.level = 0.95,
+          correct = FALSE)
+
+```
+
+## Latihan 2.3 {.smaller}
+
+::: columns
+::: {.column width="50%"}
+Sebuah tim peneliti mensurvei secara acak pemuda-pemudi yang berusia 18-22 tahun, 125 dari pedesaan dan 88 dari perkotaan. Secara berturut-turut, 19 dan 21 pemuda/pemudi dari pedesaan dan perkotaan tersebut tidak sedang menempuh pendidikan jenjang perguruan tinggi (diadaptasi dari @agustina2022). Histogram pada @fig-dist-rand-boot-pt-desa-kota menunjukkan distribusi selisih proporsi 10.000 pasang sampel hasil simulasi (dari uji randomisasi dan bootstrap).
+
+Tulislah sebuah pertanyaan penelitian yang dapat dijawab oleh tiap-tiap histogram tersebut!
+
+```{r}
+#| include: false
+
+sts_pt_DesaKota <- data.frame(
+  id = 1:213,
+  asal = c(rep("desa", 125),
+           rep("kota", 88)),
+  status = c(rep("sekolah", 19),
+             rep("tidak sekolah", 106),
+             rep("sekolah", 21),
+             rep("tidak sekolah", 67)))
+```
+:::
+
+::: {#fig-dist-rand-boot-pt-desa-kota .column width="50%" layout-nrow="2"}
+![](figs/lat-2.2a.png)
+
+![](figs/lat-2.2b.png)
+
+Dua histogram yang menunjukkan distribusi selisih proporsi dari 10.000 pasang sampel hasil simulasi dengan Metode Komputasi A dan B.
+:::
+:::
+
+## Latihan 2.4 {.smaller}
+
+Sebuah eksperimen selama 5 tahun dilakukan untuk menguji efektivitas minyak ikan dalam mengurangi serangan jantung. Dalam eksperimen tersebut, setiap subjek dipilih secara acak untuk dimasukkan ke dalam salah satu dari dua kelompok eksperimen [@manson2019]. Dengan menggunakan hasil eksperimen yang disajikan pada @tbl-minyak-ikan-jantung, apakah minyak ikan memang efektif?
+
+```{r}
+#| label: tbl-minyak-ikan-jantung
+#| tbl-cap: Hasil penelitian tentang efektivitas minyak ikan terhadap serangan jantung.
+
+minyak_ikan_jantung <- data.frame(
+  kelompok = c(rep("minyak ikan", 12933),
+               rep("plasebo", 12938)),
+  kejadian_kardiovaskular = c(rep("serangan jantung", 145),
+                              rep("tidak ada", 12788),
+                              rep("serangan jantung", 200),
+                              rep("tidak ada", 12738))
+)
+
+minyak_ikan_jantung %>%
+  count(kelompok, kejadian_kardiovaskular) %>%
+  pivot_wider(names_from = kejadian_kardiovaskular,
+              values_from = n) %>% 
+  as_tibble() %>%
+  mutate(total = `serangan jantung` + `tidak ada`) %>%
+  kbl(linesep = "", booktabs = TRUE, 
+      col.names = c("", "serangan jantung",
+                    "tidak ada", "Total")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE) %>%
+  column_spec(1:4, width = "7em")
+```
+
+# Inferensi untuk Tabel Dua Faktor
+
+Mari kita buat kesimpulan untuk tabel dua faktor.
+
+##  {#there-is-no-such-a-thing .centered data-menu-title="There is no such a thing" auto-animate="true"}
+
+::: {style="margin-top: 200px; font-size: 2em; text-align: center;"}
+There is no such a thing
+:::
+
+##  {#there-is-no-such-a-thing-as-a-stupid-question .centered data-menu-title="There is no such a thing as a stupid question" auto-animate="true"}
+
+::: {style="margin-top: 200px; font-size: 1.5em; text-align: center;"}
+There is no such a thing
+:::
+
+::: {.midi style="text-align: center;"}
+as a stupid question.
+:::
+
+##  {#there-is-such-a-thing-as-a-stupid-question .centered data-menu-title="There is such a thing as a stupid question" auto-animate="true"}
+
+::: {style="margin-top: 200px; font-size: 1.5em; text-align: center;"}
+There is ~~no~~ such a thing
+:::
+
+::: {.midi style="text-align: center;"}
+as a stupid question.
+:::
+
+## Pertanyaan 1
+
+Pertanyaan yang akan kita jawab pada bagian ini adalah sebagai berikut.
+
+> Apakah jenis pertanyaan yang diajukan pembeli kepada penjual iPod mempengaruhi penjual tersebut untuk memberitahukan masalah yang pernah dialami iPod yang dijualnya?
+
+Kita mungkin menduga bahwa jenis pertanyaan tersebut mempengaruhi penjual iPod untuk menyingkap masalah iPod yang dijualnya.
+
+## Hipotesis Nol dan Alternatifnya
+
+Berikut ini dua hipotesis yang dapat diajukan terhadap pertanyaan yang diberikan.
+
+-   $H_{0}$: Jenis pertanyaan yang diajukan pembeli tidak mempengaruhi penjual apakah dia memberitahukan masalah yang pernah dialami oleh iPodnya.
+
+-   $H_{A}$: Jenis pertanyaan tersebut mempengaruhi penjual untuk memberitahukan masalah iPodnya atau tidak.
+
+Untuk melakukan uji hipotesis, kita gunakan $\alpha = \text{0,05}$.
+
+## Data dan Konteksnya
+
+Dalam sebuah eksperimen, setiap subjeknya dibagi ke dalam tiga kelompok secara acak dan diminta menjadi penjual iPod. Mereka mendapatkan imbalan \$10 plus 5% dari harga jualnya karena telah turut serta. iPod yang mereka jual telah mengalami masalah (yaitu *freezing*), dua kali namun masih berfungsi dengan baik.
+
+Calon pembeli kemudian menanyakan satu dari tiga jenis pertanyaan, yaitu pertanyaan umum, pertanyaan dengan asumsi negatif atau positif, di setiap kelompok eksperimennya.
+
+## Data dan Konteksnya (2)
+
+-   Umum: Apa yang dapat Anda ceritakan tentang iPod itu?
+
+-   Asumsi positif: iPodnya tidak pernah mengalami masalah apa pun, *kan*?
+
+-   Asumsi negatif: Masalah apa yang pernah dimiliki iPod itu?
+
+## Data dan Konteksnya (3) {.smaller}
+
+```{r}
+#| echo: false
+#| label: tbl-ringkas-sampel-jual-iPod
+#| tbl-cap: Ringkasan statistik terhadap penelitian tentang penjualan iPod.
+
+sampel_jualiPod <- data.frame(
+  jenis_pertanyaan = c(rep("umum", 73),
+                       rep("asumsi positif", 73),
+                       rep("asumsi negatif", 73)
+                       ),
+  respons = c(rep("memberitahu", 2),
+              rep("menyembunyikan", 71),
+              rep("memberitahu", 23),
+              rep("menyembunyikan", 50),
+              rep("memberitahu", 36),
+              rep("menyembunyikan", 37)
+              )
+  )
+sampel_jualiPod %>%
+  count(jenis_pertanyaan, respons) %>%
+  pivot_wider(names_from = respons,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c("Jenis pertanyaan",
+                    "Memberitahu masalah",
+                    "Menyembunyikan masalah",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+## Eksplorasi Data
+
+```{r}
+#| echo: false
+#| label: fig-diagram-batang-jual-iPod
+#| fig-cap: Persentase subjek yang memberitahu atau menyembunyikan masalah iPod yang dijualnya di setiap kelompok eksperimen.
+#| fig-asp: 0.3
+
+dbatang_jualiPod <- ggplot(sampel_jualiPod,
+       aes(y = jenis_pertanyaan,
+           fill = respons)) +
+  geom_bar(position = "fill") +
+  scale_x_continuous(labels = label_percent()) +
+  labs(x = "Persentase",
+       y = "Jenis pertanyaan",
+       fill = "Respons")
+dbatang_jualiPod
+```
+
+## Pikirkan ...
+
+Berdasarkan @fig-diagram-batang-jual-iPod, manakah yang lebih masuk akal? Mengapa?
+
+-   Perbedaan persentase `respons` subjek untuk `jenis_pertanyaan` yang berbeda hanya akibat dari keacakan saja.
+
+-   Perbedaan `respons` tersebut dipengaruhi oleh `jenis_pertanyaan` yang diajukan kepada mereka.
+
+## Cermati ... {.smaller}
+
+::: {#fig-banding-sampel-vs-simulasi-iPod layout-ncol="2"}
+```{r}
+#| echo: false
+#| label: fig-diagram-batang-jual-iPod-2
+#| fig-cap: Visualisasi persentase tiap-tiap kelompok eksperimen dalam sampel yang dimiliki.
+#| fig-asp: 0.75
+
+dbatang_jualiPod +
+  theme(axis.title = element_blank())
+```
+
+```{r}
+#| echo: false
+#| label: fig-diagram-batang-sim-jual-iPod
+#| fig-cap: Visualisasi persentase tiap-tiap kelompok eksperimen dalam 40 sampel simulasi dengan asumsi `respons` bebas terhadap `jenis_pertanyaan`.
+#| fig-asp: 0.75
+
+sampel_jualiPod %>%
+  specify(respons ~ jenis_pertanyaan, success = "memberitahu") %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 40, type = "permute") %>%
+  mutate(x = (replicate %% 4) + 1,
+         y = ceiling(replicate/4)) %>%
+  ggplot(aes(y = jenis_pertanyaan,
+             fill = respons)) +
+  geom_bar(position = "fill") +
+  scale_x_continuous(labels = label_percent()) +
+  facet_grid(y ~ x) +
+  theme(axis.title = element_blank()) +
+  labs(x = "Persentase",
+       y = "Jenis pertanyaan",
+       fill = "Respons")
+```
+
+Perbandingan sampel yang dimiliki dengan 40 sampel hasil simulasi.
+:::
+
+## Frekuensi Harapan {.smaller}
+
+```{r}
+#| echo: false
+#| label: tbl-banding-obs-eks-jual-iPod
+#| tbl-cap: Frekuensi yang terobservasi dan harapannyanya dalam eksperimen penjualan iPod.
+
+# Uji tabel dua faktor
+jualiPod_chi_sq <- chisq.test(sampel_jualiPod$respons,
+                              sampel_jualiPod$jenis_pertanyaan)
+
+# Mengambil tabel uji untuk terobservasi
+jualiPod_chi_sq_obs <- jualiPod_chi_sq$observed %>% 
+  # Dijadikan tibble dan ditambahk variabel `jenis`
+  as_tibble() %>% 
+  mutate(jenis = "terobservasi")
+
+# Mengambil tabel uji untuk ekspektasi
+jualiPod_chi_sq_eksp <- jualiPod_chi_sq$expected %>% 
+  # Dijadikan tibble dan ditambah variabel `jenis`
+  as.table() %>%
+  as_tibble() %>% 
+  mutate(jenis = "ekspektasi")
+
+# Menggabungkan tabel berdasarkan barisnya
+jualiPod_chi_sq_tab <- bind_rows(jualiPod_chi_sq_obs,
+                                 jualiPod_chi_sq_eksp) %>%
+  # Menghapus `sampel_jualiPod$` dalam nama semua variabel
+  rename_with(.fn = str_remove,
+              .cols = everything(),
+              "sampel_jualiPod\\$")
+
+jualiPod_chi_sq_tab %>%
+  # Menambah variabel `respons_jenis`
+  mutate(respons_jenis = paste0(respons, "-", jenis)) %>%
+  # Menghilangkan variabel respons dan jenis
+  select(-respons, -jenis) %>%
+  # Mengkonversi menjadi tabel melebar
+  pivot_wider(names_from = respons_jenis, values_from = n) %>%
+  # Mengubah posisi kolom
+  relocate(
+    jenis_pertanyaan,
+    contains("memberitahu"),
+    contains("menyembunyikan")
+  ) %>%
+  # Menambahkan tanda kurung
+  mutate(across(contains("ekspektasi"), ~paste0("(", round(.x, 2), ")"))) %>%
+  rowwise() %>%
+  # Menambahkan kolom dan baris `Total`
+  mutate(Total = sum(c_across(contains("terobservasi")))) %>%
+  adorn_totals(where = "row") %>%
+  mutate(
+    `memberitahu-ekspektasi` = ifelse(`memberitahu-ekspektasi` == "-",
+                                      NA,
+                                      `memberitahu-ekspektasi`),
+    `menyembunyikan-ekspektasi` = ifelse(`menyembunyikan-ekspektasi` == "-",
+                                         NA,
+                                         `menyembunyikan-ekspektasi`)
+  ) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c("", "", "", "", "", "")
+  ) %>%
+  column_spec(1, width = "15em") %>%
+  column_spec(3, color = "blue", italic = TRUE) %>%
+  column_spec(5, color = "blue", italic = TRUE) %>%
+  column_spec(6, width = "5em") %>%
+  add_header_above(c(" ", "Memberitahu" = 2,
+                     "Menyembunyikan" = 2,
+                     "Total")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), 
+                latex_options = c("striped", "hold_position"),
+                full_width = FALSE)
+```
+
+## Menghitung Frekuensi Harapan
+
+@eq-frek-harapan-tbl-2-faktor digunakan untuk menghitung frekuensi harapan dalam baris ke-$i$ dan kolom ke-$j$ dalam tabel dua faktor.
+
+$$
+\textrm{Frekuensi harapan}_{i,j}=\frac {(\textrm{total baris }i) \cdot (\text{total kolom }j)}{\text{total tabel}}
+$$ {#eq-frek-harapan-tbl-2-faktor}
+
+## Statistik Chi Kuadrat {.smaller}
+
+Kita hitung kuadrat dari simpangan frekuensi terobservasi terhadap frekuensi harapannya untuk setiap selnya, kemudian kita bagi dengan frekuensi harapannya.
+
+$$
+\begin{aligned}
+&\text{Rumus Umum} &&
+\frac{(\text{frek. terobservasi } - \text{frek. harapan})^2}{\text{frek. harapan}} \\
+&\text{Baris 1, Kolom 1} &&
+\frac{(2 - \text{20,33})^2}{\text{20,33}} = \text{16,53} \\
+&\text{Baris 2, Kolom 1} &&
+\frac{(23 - \text{20,33})^2}{\text{20,33}} = \text{0,35} \\
+& \hspace{9mm}\vdots &&
+\hspace{13mm}\vdots \\
+&\text{Baris 3, Kolom 2} &&
+\frac{(37 - \text{52,67})^2}{\text{52,67}} = \text{4,66}\end{aligned}
+$$
+
+## Statistik Chi Kuadrat (2)
+
+Statistik $\chi^{2}$, chi (dibaca kī) kuadrat, diperoleh dengan menjumlahkan semua nilai yang telah dihitung tadi.
+
+$$
+\chi^{2} = \text{16,53}+\text{0,35}+\dots+\text{4,66}=\text{40,13}
+$$
+
+## Variabilitas Statistik
+
+```{r}
+#| echo: false
+#| label: fig-variabilitas-chi-kuadrat-jual-iPod
+#| fig-cap: Distribusi chi kuadrat 10.000 sampel hasil simulasi dalam eksperimen penjualan iPod.
+#| fig-asp: 0.5
+
+dist_sampling_sim_jualiPod <- sampel_jualiPod %>%
+  specify(respons ~ jenis_pertanyaan) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 10000, type = "permute") %>%
+  calculate(stat = "Chisq")
+visualise(dist_sampling_sim_jualiPod) +
+  labs(x = "Chi kuadrat",
+       y = "Frekuensi",
+       title = "")
+```
+
+## Nilai-P {.smaller}
+
+```{r}
+#| include: false
+
+chi_kuadrat_jual_iPod <- sampel_jualiPod %>%
+  observe(respons ~ jenis_pertanyaan,
+          stat = "Chisq")
+P_jual_iPod <- dist_sampling_sim_jualiPod %>%
+  get_p_value(obs_stat = chi_kuadrat_jual_iPod,
+              direction = "greater")
+```
+
+Dengan menghitung proporsi sampel yang sama dengan sampel yang dimiliki atau yang lebih ekstrem, diperoleh nilai-P `r P_jual_iPod`. Artinya, dalam distribusi yang ditunjukkan pada @fig-P-jual-iPod, tidak ada sampel simulasi yang seekstrem atau lebih ekstrem dari sampel yang dimiliki.
+
+```{r}
+#| warning: false
+#| echo: false
+#| label: fig-P-jual-iPod
+#| fig-cap: Nilai-P dalam eksperimen penjualan iPod divisualisasikan sebagai luas daerah di sebelah kanan 40,13.
+#| fig-asp: 0.3
+
+visualise(dist_sampling_sim_jualiPod) +
+  shade_p_value(obs_stat = chi_kuadrat_jual_iPod,
+                direction = "greater") +
+  labs(x = "Chi kuadrat",
+       y = "Frekuensi",
+       title = "")
+```
+
+## Kesimpulan dan Interpretasi
+
+Karena P bernilai `r P_jual_iPod` yang kurang dari $\alpha = \text{0,05}$, kita tolak hipotesis nol.
+
+Jadi, sampel yang kita miliki menjadi bukti yang cukup untuk mendukung dugaan kita di awal, yaitu jenis pertanyaan yang diajukan ke penjual iPod (umum, asumsi positif, dan asumsi negatif) mempengaruhi penjual tersebut untuk menyingkap masalah iPod yang dijualnya.
+
+## Menyingkap Karakteristik Distribusi Chi Kuadrat {.smaller .scrollable}
+
+Untuk kepentingan penyelidikan, misalnya kita memiliki empat sampel berikut. Bagaimana bentuk distribusi chi kuadratnya hasil simulasinya?
+
+```{r}
+#| echo: false
+
+sampel1_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 40),
+                   rep("II", 40),
+                   rep("III", 40)),
+  faktor_kolom = c(rep("A", 15),
+                   rep("B", 25),
+                   rep("A", 24),
+                   rep("B", 16),
+                   rep("A", 20),
+                   rep("B", 20))
+)
+
+sampel2_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 30),
+                   rep("II", 60),
+                   rep("III", 40)),
+  faktor_kolom = c(rep("A", 18),
+                   rep("B", 12),
+                   rep("A", 32),
+                   rep("B", 28),
+                   rep("A", 16),
+                   rep("B", 24))
+)
+
+sampel3_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 80),
+                   rep("II", 75),
+                   rep("III", 50)),
+  faktor_kolom = c(rep("A", 18),
+                   rep("B", 62),
+                   rep("A", 12),
+                   rep("B", 63),
+                   rep("A", 30),
+                   rep("B", 20))
+)
+
+sampel4_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 60),
+                   rep("II", 50),
+                   rep("III", 60)),
+  faktor_kolom = c(rep("A", 15),
+                   rep("B", 45),
+                   rep("A", 13),
+                   rep("B", 37),
+                   rep("A", 15),
+                   rep("B", 45))
+)
+```
+
+::: {#tbl-4-sampel-ilus1-chisq layout-ncol="2"}
+```{r}
+#| label: tbl-sampel1-chisq-ilus1
+#| tbl-cap: Sampel 1
+
+sampel1_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+```{r}
+#| label: tbl-sampel2-chisq-ilus1
+#| tbl-cap: Sampel 2
+
+sampel2_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+```{r}
+#| label: tbl-sampel3-chisq-ilus1
+#| tbl-cap: Sampel 3
+
+sampel3_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+```{r}
+#| label: tbl-sampel4-chisq-ilus1
+#| tbl-cap: Sampel 4
+
+sampel4_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+Tabel dua faktor sampel 1, 2, 3, dan 4.
+:::
+
+## Menyingkap Karakteristik Distribusi Chi Kuadrat (2)
+
+```{r}
+#| label: fig-dist-chi-kuadrat-ilus1
+#| fig-cap: Distribusi chi kuadrat untuk sampel 1 sampai 4.
+#| fig-asp: 0.5
+
+dist_chisq_sampel1_ilus1 <- sampel1_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 1)
+dist_chisq_sampel2_ilus1 <- sampel2_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 2)
+dist_chisq_sampel3_ilus1 <- sampel3_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 3)
+dist_chisq_sampel4_ilus1 <- sampel4_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 4)
+dist_chisq_gabung_ilus1 <- bind_rows(
+  dist_chisq_sampel1_ilus1,
+  dist_chisq_sampel2_ilus1,
+  dist_chisq_sampel3_ilus1,
+  dist_chisq_sampel4_ilus1
+)
+visualise(dist_chisq_gabung_ilus1) +
+  facet_grid(sampel ~ .) +
+  labs(x = "Chi kuadrat",
+       y = "Frekuensi",
+       title = "")
+```
+
+## Menyingkap Karakteristik Distribusi Chi Kuadrat (3) {.smaller .scrollable}
+
+Bagaimana bentuk distribusi $\chi^{2}$ jika sampel-sampel yang kita miliki ditunjukkan pada @tbl-4-sampel-chisq-ilus2?
+
+```{r}
+#| echo: false
+
+sampel5_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 40),
+                   rep("II", 38)),
+  faktor_kolom = c(rep("A", 12),
+                   rep("B", 28),
+                   rep("A", 22),
+                   rep("B", 16))
+)
+sampel6_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 90),
+                   rep("II", 90),
+                   rep("III", 90),
+                   rep("IV", 90)),
+  faktor_kolom = c(rep("A", 12),
+                   rep("B", 50),
+                   rep("C", 28),
+                   rep("A", 10),
+                   rep("B", 55),
+                   rep("C", 25),
+                   rep("A", 15),
+                   rep("B", 51),
+                   rep("C", 24),
+                   rep("A", 6),
+                   rep("B", 41),
+                   rep("C", 43))
+)
+sampel7_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 60),
+                   rep("II", 52),
+                   rep("III", 48),
+                   rep("IV", 58),
+                   rep("V", 45),
+                   rep("VI", 66),
+                   rep("VII", 61)),
+  faktor_kolom = c(rep("A", 31),
+                   rep("B", 29),
+                   rep("A", 25),
+                   rep("B", 27),
+                   rep("A", 20),
+                   rep("B", 28),
+                   rep("A", 36),
+                   rep("B", 22),
+                   rep("A", 12),
+                   rep("B", 33),
+                   rep("A", 40),
+                   rep("B", 26),
+                   rep("A", 42),
+                   rep("B", 19))
+)
+sampel8_sim_Chisq <- data.frame(
+  faktor_baris = c(rep("I", 50),
+                   rep("II", 52),
+                   rep("III", 47),
+                   rep("IV", 50),
+                   rep("V", 71),
+                   rep("VI", 50)),
+  faktor_kolom = c(rep("A", 10),
+                   rep("B", 12),
+                   rep("C", 12),
+                   rep("D", 16),
+                   rep("A", 8),
+                   rep("B", 17),
+                   rep("C", 7),
+                   rep("D", 20),
+                   rep("A", 13),
+                   rep("B", 10),
+                   rep("C", 9),
+                   rep("D", 15),
+                   rep("A", 9),
+                   rep("B", 16),
+                   rep("C", 17),
+                   rep("D", 8),
+                   rep("A", 18),
+                   rep("B", 17),
+                   rep("C", 18),
+                   rep("D", 18),
+                   rep("A", 6),
+                   rep("B", 9),
+                   rep("C", 16),
+                   rep("D", 19))
+)
+```
+
+::: {#tbl-4-sampel-chisq-ilus2 layout-ncol="2"}
+```{r}
+#| label: tbl-sampel5-chisq-ilus2
+#| tbl-cap: Sampel 5
+
+sampel5_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+```{r}
+#| label: tbl-sampel6-chisq-ilus2
+#| tbl-cap: Sampel 6
+
+sampel6_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "C",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+```{r}
+#| label: tbl-sampel7-chisq-ilus2
+#| tbl-cap: Sampel 7
+
+sampel7_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+```{r}
+#| label: tbl-sampel8-chisq-ilus2
+#| tbl-cap: Sampel 8
+
+sampel8_sim_Chisq %>%
+  count(faktor_baris, faktor_kolom) %>%
+  pivot_wider(names_from = faktor_kolom,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE,
+      col.names = c(" ",
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "Total")
+    ) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"), 
+                latex_options = c("striped", "hold_position"), full_width = FALSE)
+```
+
+Tabel dua faktor sampel 5, 6, 7, dan 8.
+:::
+
+## Menyingkap Karakteristik Distribusi Chi Kuadrat (4)
+
+```{r}
+#| label: fig-dist-chi-kuadrat-ilus2
+#| echo: false
+#| warning: false
+#| fig-cap: Distribusi chi kuadrat untuk sampel 5 sampai 8.
+#| fig-asp: 0.5
+
+dist_chisq_sampel5_ilus2 <- sampel5_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris,
+          success = "A") %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 1)
+dist_chisq_sampel6_ilus2 <- sampel6_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 2)
+dist_chisq_sampel7_ilus2 <- sampel7_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 3)
+dist_chisq_sampel8_ilus2 <- sampel8_sim_Chisq %>%
+  specify(faktor_kolom ~ faktor_baris) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "Chisq") %>%
+  mutate(sampel = 4)
+dist_chisq_gabung_ilus2 <- bind_rows(
+  dist_chisq_sampel5_ilus2,
+  dist_chisq_sampel6_ilus2,
+  dist_chisq_sampel7_ilus2,
+  dist_chisq_sampel8_ilus2
+)
+visualise(dist_chisq_gabung_ilus2) +
+  facet_grid(sampel ~ .) +
+  labs(x = "Chi kuadrat",
+       y = "Frekuensi",
+       title = "")
+```
+
+## Model Matematis Distribusi Chi Kuadrat
+
+Distribusi $\chi^{2}$ memiliki bentuk yang tergantung dengan parameternya, yaitu derajat bebas $df$.
+
+```{r}
+#| echo: false
+#| label: fig-beberapa-dist-chi-kuadrat
+#| fig-cap: Distribusi $\chi^{2}$ untuk derajat bebas 1, 2, 3, 4, 6, dan 9.
+#| fig-asp: 0.3
+
+ggplot(data.frame(x = c(0, 15)),
+       aes(x = x)) + 
+  geom_hline(yintercept = 0,
+             linewidth = 1) +
+  geom_vline(xintercept = 0,
+             linewidth = 1) +
+  mapply(function(k, warna) {
+    stat_function(fun = dchisq,
+                  args = list(df = k),
+                  col = warna,
+                  linewidth = 1.5)
+  }, 
+  k = c(1, 2, 3, 4, 6, 9), 
+  warna = c("#1b9e77", "#d95f02", "#7570b3",
+            "#e7298a", "#66a61e", "#e6ab02")
+) +
+  ylim(0, 0.5) +
+  theme(axis.title.y = element_blank()) +
+  labs(x = "Chi kuadrat",
+       title = "")
+```
+
+## Variabilitas Statistik Chi Kuadrat
+
+Uji hipotesis untuk tabel dua faktor mengikuti distribusi $\chi^{2}$. Dengan kata lain, jika hipotesis nolnya dianggap benar dan kondisi-kondisinya terpenuhi, distribusi samplingnya dapat dimodelkan dengan distribusi ini. Derajat bebasnya adalah
+
+$$
+df=\left ( \text{banyak baris} - 1 \right ) \cdot \left ( \text{banyak kolom} - 1 \right )
+$$ {#eq-df-dist-chisq}
+
+Dengan @eq-df-dist-chisq, derajat bebas untuk uji hipotesis pada masalah penjualan iPod sebelumnya adalah $df = (3-2) \cdot (2-1) = 2$.
+
+## Statistik Uji
+
+Untuk melihat posisi sampel yang kita miliki dibandingkan dengan semua kemungkinan sampel (yang berukuran sama) lainnya, kita gunakan statistik uji yang dihitung dengan @eq-stat-uji-chisq berikut.
+
+$$
+\chi^{2} = \sum_{i,j}^{} \frac {\left ( \text{frek. terobservasi}-\text{frek. harapan} \right )^{2}}{\text{frek. harapan}}
+$$ {#eq-stat-uji-chisq}
+
+## Kondisi
+
+Berikut ini adalah dua kondisi yang diperlukan untuk menggunakan distribusi $\chi^{2}$.
+
+-   Observasi-observasinya bebas.
+
+-   Sampelnya besar, yaitu frekuensi harapannya paling tidak 5 di setiap selnya.
+
+## Nilai-P
+
+Karena pemilihan sampelnya secara acak, eksperimen tentang penjualan iPod sebelumnya memenuhi kondisi yang pertama. Selain itu, berdasarkan @tbl-banding-obs-eks-jual-iPod, setiap frekuensi harapannya lebih dari 5.
+
+Dengan demikian, kita gunakan distribusi $\chi^{2}$ dengan $df=2$ untuk menghitung nilai-P seperti berikut.
+
+```{r}
+#| echo: true
+
+P_teor_jualiPod <- pchisq(40.13,
+       df = 2,
+       lower.tail = FALSE)
+P_teor_jualiPod
+```
+
+## Nilai-P (2)
+
+::: columns
+::: {.column width="40%"}
+Nilai-P sebesar `r P_teor_jualiPod` tersebut direpresentasikan sebagai luas daerah pada @fig-P-teor-jual-iPod. Nilai-P tersebut sangat dekat dengan nilai-P ketika kita menggunakan uji randomisasi.
+:::
+
+::: {.column width="60%"}
+```{r}
+#| label: fig-P-teor-jual-iPod
+#| echo: false
+#| fig-cap: Nilai-P yang digambarkan sebagai luas daerah di sebelah kanan 40,13.
+#| fig-asp: 0.5
+
+ggplot(data.frame(x = c(0, 50)),
+       aes(x = x)) +
+  stat_function(fun = dchisq,
+                args = list(df = 2),
+                geom = "area",
+                xlim = c(40.13, 50),
+                fill = "pink") +
+  geom_hline(yintercept = 0,
+             linewidth = 0.5) +
+  geom_vline(xintercept = 0,
+             linewidth = 0.5) +
+  stat_function(fun = dchisq,
+                args = list(df = 2),
+                linewidth = 1) +
+  stat_function(fun = dchisq,
+                args = list(df = 2),
+                linewidth = 1,
+                col = "pink",
+                xlim = c(40.13, 50)) +
+  xlim(0, 50) +
+  theme(axis.title.y = element_blank()) +
+  labs(x = "Chi kuadrat")
+```
+:::
+:::
+
+## Metode Lain
+
+Kita dapat menggunakan fungsi `chisq.test` untuk melakukan uji hipotesis terhadap tabel dua faktor.
+
+```{r}
+#| echo: true
+chisq.test(sampel_jualiPod$respons,           # <1>
+           sampel_jualiPod$jenis_pertanyaan,  # <1>
+           correct = FALSE)                   # <2>
+```
+
+1.  Argumen fungsi ini bisa berupa vektor-vektor numerik, x dan y, atau sebuah matriks. x dan y juga dapat berupa faktor.
+2.  Argumen yang mengindikasikan apakah akan menerapkan koreksi kontinuitas ketika menghitung statistik uji.
+
+## Latihan 2.5 {.smaller .scrollable}
+
+@tbl-bertindak-prbhn-iklim menyajikan hasil jajak pendapat Pew Research [@Funk2021] yang mensurvei responden, mulai dari Gen Z sampai Boomer (dan yang lebih tua), apakah mereka telah bertindak untuk membantu mengatasi perubahan iklim dalam satu tahun terakhir. Dengan $\alpha = \text{0,05}$, ujilah klaim yang menyatakan bahwa terdapat hubungan antara generasi dan tindakan mereka terhadap perubahan iklim.
+
+```{r}
+#| label: tbl-bertindak-prbhn-iklim
+#| tbl-cap: Respons tiap generasi apakah telah membantu mengatasi perubahan iklim.
+
+aksi_prbhn_iklim <- tribble(
+      ~Generasi,        ~n,   ~p,
+      "Gen Z",           912, 0.32,
+      "Milenial",      3160, 0.28,
+      "Gen X",          3518, 0.23,
+      "Boomer dan yang lebih tua", 6074, 0.21
+    ) %>%
+      mutate(
+        Generasi = fct_relevel(Generasi,
+                               "Gen Z",
+                               "Milenial",
+                               "Gen X",
+                               "Boomer dan yang lebih tua"),
+        `Bertindak` = round(n * p, 0),
+        `Tidak bertindak` = n - `Bertindak`
+      ) %>%
+      select(-n, -p) %>%
+      pivot_longer(cols = c(`Bertindak`,
+                            `Tidak bertindak`),
+                   names_to = "respons",
+                   values_to = "n") %>%
+      uncount(weights = n)
+
+aksi_prbhn_iklim %>%
+  count(Generasi, respons) %>%
+  pivot_wider(names_from = respons, values_from = n) %>%
+  select(Generasi, `Bertindak`, `Tidak bertindak`) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE, align = "lrrr",
+      format.args = list(big.mark = ",")) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"),
+                latex_options = "HOLD_position",
+                full_width = FALSE) %>%
+  column_spec(1, width = "10em") %>%
+  column_spec(2:4, width = "5em") %>%
+  add_header_above(c(" " = 1,
+                     "Respons" = 2, " " = 1))
+```
+
+## Latihan 2.6 {.smaller}
+
+Dalam sebuah kuis pada mata kuliah Aljabar dan Trigonometri, dosen Anda memberikan salah satu `jenis_soal` berikut secara acak kepada setiap mahasiswanya dan menganggap bahwa tingkat kesukaran ketiga `jenis_soal` tersebut setara.
+
+::: {#fig-jenis-soal-AG layout-ncol="3"}
+![`jenis_soal` a](figs/jenis-soal-a.png){#fig-jenis-soal-a-AG}
+
+![`jenis_soal` b](figs/jenis-soal-b.png){#fig-jenis-soal-b-AG}
+
+![`jenis_soal` c](figs/jenis-soal-c.png){#fig-jenis-soal-c-AG}
+
+Tiga `jenis_soal` yang diberikan secara acak kepada tiap-tiap mahasiswa.
+:::
+
+## Latihan 2.6 (2) {.smaller}
+
+@tbl-hasil-kuis-AG menyajikan hasil kuis mahasiswa untuk soal tersebut. Gunakan tabel tersebut untuk menguji klaim dosen Anda bahwa tingkat kesukaran ketiga `jenis_soal` tersebut setara!
+
+```{r}
+#| echo: false
+#| label: tbl-hasil-kuis-AG
+#| tbl-cap: Banyaknya mahasiswa yang menjawab benar atau salah di setiap `jenis_soal`-nya.
+
+df_kuis_AG <- data.frame(
+  tahun = c(rep(2020, 73),
+            rep(2021, 87)),
+  kelompok = c(rep("A", 29),
+               rep("B", 44),
+               rep("C", 46),
+               rep("D", 41)),
+  jenis_soal = c(rep("a", 6),
+                 rep("b", 14),
+                 rep("c", 9),
+                 rep("a", 14),
+                 rep("b", 18),
+                 rep("c", 12),
+                 rep("a", 21),
+                 rep("b", 15),
+                 rep("c", 10),
+                 rep("a", 18),
+                 rep("b", 13),
+                 rep("c", 10)),
+  akurasi = c(rep("benar", 5),
+              rep("salah", 1),
+              rep("benar", 14),
+              rep("salah", 0),
+              rep("benar", 6),
+              rep("salah", 3),
+              rep("benar", 10),
+              rep("salah", 4),
+              rep("benar", 16),
+              rep("salah", 2),
+              rep("benar", 10),
+              rep("salah", 2),
+              rep("benar", 13),
+              rep("salah", 8),
+              rep("benar", 13),
+              rep("salah", 2),
+              rep("benar", 8),
+              rep("salah", 2),
+              rep("benar", 8),
+              rep("salah", 10),
+              rep("benar", 11),
+              rep("salah", 2),
+              rep("benar", 9),
+              rep("salah", 1))
+)
+
+df_kuis_AG %>%
+  count(jenis_soal, akurasi) %>%
+  pivot_wider(names_from = akurasi,
+              values_from = n) %>%
+  adorn_totals(where = c("row", "col")) %>%
+  kbl(linesep = "", booktabs = TRUE) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "condensed"),
+                full_width = FALSE) %>%
+  add_header_above(c(" " = 1,
+                     "akurasi" = 2, " " = 1))
+```
+
+## Daftar Pustaka
+
+::: {#refs}
+:::

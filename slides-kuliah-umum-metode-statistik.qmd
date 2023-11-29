@@ -1,0 +1,144 @@
+---
+title: "STAT503 Metode Statistik"
+subtitle: "Koneksi Metode Statistik dan Dunia Kerja"
+author: ""
+date: 2023/11/21
+date-format: long
+format:
+  revealjs:
+    theme: night
+    transition: fade
+    multiplex: true
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+
+```
+
+## Tujuan {.smaller}
+
+Setelah mengikuti kuliah umum Metode Statistik, mahasiswa diharapkan
+
+-   memiliki wawasan bagaimana Metode Statistik (dan kompetensi statistik secara umum) digunakan dalam dunia kerja; dan
+
+-   memiliki pengetahuan dan keterampilan bagaimana menggunakan metode-metode statistik untuk memecahkan berbagai permasalahan statistik.
+
+## Rencana kegiatan {style=".smaller"}
+
+::: panel-tabset
+## Lini masa
+
+```{r}
+#| label: fig-lini-masa-kegiatan
+#| echo: false
+#| fig-cap: Lini masa kuliah umum Metode Statistik
+#| fig-asp: 0.4
+
+acara <- data.frame(
+  kegiatan = c("Pendahuluan",
+               "Sambutan",
+               "Penyampaian materi",
+               "Tanya jawab",
+               "Penutup"),
+  mulai = c(0, 1, 2, 6, 8),
+  tengah = c(0.5, 1.5, 4, 7, 8.5),
+  durasi = c(1, 1, 4, 2, 1),
+  akhir = c(1, 2, 6, 8, 9))
+acara %>%
+  mutate(kegiatan = fct_reorder(kegiatan,
+                                mulai)) %>%
+  ggplot(aes(x = tengah, y = kegiatan)) +
+  geom_point() +
+  geom_tile(aes(width = durasi,
+                fill = kegiatan),
+            col = "black") +
+  theme_bw() +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "none")
+```
+
+## Kode
+
+``` r
+acara <- data.frame(
+  kegiatan = c("Pendahuluan",
+               "Sambutan",
+               "Penyampaian materi",
+               "Tanya jawab",
+               "Penutup"),
+  mulai = c(0, 1, 2, 6, 8),
+  tengah = c(0.5, 1.5, 4, 7, 8.5),
+  durasi = c(1, 1, 4, 2, 1),
+  akhir = c(1, 2, 6, 8, 9))
+
+acara %>%
+  mutate(kegiatan = fct_reorder(kegiatan,
+                                mulai)) %>%
+  ggplot(aes(x = tengah, y = kegiatan)) +
+  geom_point() +
+  geom_tile(aes(width = durasi,
+                fill = kegiatan),
+            col = "black") +
+  theme_bw() +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "none")
+```
+:::
+
+## Tentang narasumber {.smaller}
+
+::: columns
+**Dahiri, S.Si., M.Sc**
+
+::: {.column width="70%"}
+Beliau bekerja di Pusat Analisis dan Akuntabilitas Keuangan Negara Badan Keahlian Setjen DPR RI. Tugas beliau adalah membuat kajian-kajian terkait ekonomi makro dan menelaah Anggaran Pendapatan dan Belanja Negara (APBN). Selain itu, beliau terlibat dalam penyusunan Naskah Akademik dan Rancangan Undang-Undang (RUU). Keterampilan beliau adalah analisis data dan *forecasting*.
+
+-   Ahli Muda Pusat Analisis dan Akuntabilitas Keuangan Negara Badan Keahlian Setjen DPR RI.
+
+-   CEO Kenzo Solution
+:::
+
+::: {.column width="30%"}
+![](figs/dahiri.png){fig-align="center"}
+:::
+:::
+
+## Materi kuliah umum
+
+::: columns
+::: {.column width="60%"}
+Materi kuliah umum dapat diakses melalui tautan <https://bit.ly/metode_statistika>. Materi tersebut juga dapat diakses dengan memindai kode QR di samping.
+:::
+
+::: {.column width="40%"}
+![](figs/kode-qr--kuliah-umum.png){fig-alt="Kode QR untuk mengakses materi kuliah umum Metode Statistik"}
+:::
+:::
+
+# Tanya jawab
+
+Silakan ajukan pertanyaan kepada narasumber.
+
+## Evaluasi pelaksanaan kuliah umum
+
+::: columns
+::: {.column width="60%"}
+Bagi para peserta kuliah umum, silakan berikan **penilaian dan masukan** terhadap pelaksanaan kuliah umum tersebut melalui tautan <https://s.id/KU-MetStat> atau dengan memindai kode QR di samping.
+:::
+
+::: {.column width="40%"}
+![](figs/qr-KU-MetStat.png){fig-alt="Kode QR untuk formulir evaluasi kuliah umum Metode Statistik" fig-align="center"}
+:::
+:::
+
+# Terima kasih
+
+Semoga menambah wawasan tentang metode-metode statistik dan dunia kerja. Tetap semangat!
