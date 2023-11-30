@@ -31,36 +31,224 @@ csl: apa.csl
 google-scholar: true
 ---
 
-# Usia Guru dan Kapabilitasnya terhadap Teknologi Komputer
+```{r}
+#| label: pengaturan
 
-Seringkali kita mendengar pernyataan bahwa guru yang lebih senior cenderung kurang memiliki kemampuan teknis terhadap teknologi komputer. Untuk menguji klaim ini, kita dapat menilai kemampuan teknis para guru di setiap kategori umurnya terhadap teknologi komputer.
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(infer)
+```
 
-Penilaian terhadap kemampuan teknis guru tersebut pada umumnya sulit untuk dilakukan, khususnya jika banyaknya guru yang dinilai cukup besar. Salah satu alternatifnya adalah dengan menyelidiki keyakinan para guru tersebut terkait seberapa besar kemampuan teknis mereka dalam menggunakan teknologi komputer. Dengan cara ini, kita dapat membagikan angket terhadap guru untuk menanyakan keyakinan terhadap kemampuan teknis mereka masing-masing.
+# Harga Buku
 
-Oleh karena itu, kita akan menguji klaim berikut ini.
+Pernahkan Anda membandingkan buku-buku dalam kategori yang berbeda? Ketika saya jalan-jalan di toko buku, selain mengamati sampul-sampul buku yang memang menarik, saya biasanya juga mencermati format dan harga buku-buku tersebut. Pengamatan tersebut tidak hanya saya lakukan di kategori buku yang saya minati waktu itu (kebanyakan buku tentang sains, teknologi, dan kependidikan), tetapi juga pada kategori-kategori lain. Dari pengamatan tersebut saya bertanya-tanya apakah terdapat kategori yang harga buku-bukunya cenderung lebih mahal daripada kategori lainnya.
 
-> Terdapat perbedaan besarnya keyakinan guru terhadap kemampuan teknisnya dalam menggunakan teknologi komputer antarkelompok usianya.
+Pertanyaan tersebut pada akhirnya mendorong saya untuk merencanakan survei harga buku di salah satu toko buku daring besar, yaitu Amazon.com. Agar survei tersebut terarah, pada akhirnya saya memiliki tiga kategori buku yang saya bandingkan, yaitu hukum, ilmu kesehatan, dan teknologi, mengingat ketiga kategori tersebut relatif populer di bidang akademis. Pertanyaan yang mendorong saya melakukan survei tersebut adalah sebagai berikut.
 
-Klaim tersebut memuat dia variabel. Pertama adalah keyakinan guru terhadap kemampuan teknisnya dalam menggunakan teknologi komputer. Kedua adalah kelompok usia guru tersebut. Terdapat banyak kemungkinan cara untuk membagi kelompok usia guru. Cara yang cukup sederhana adalah dengan membaginya menjadi dua kategori saja, misalnya kelompok umur junior dan senior. Dengan cara ini, kita mungkin menduga akan terdapat variasi yang relatif besar di setiap kelompok umurnya.
+> Apakah ada perbedaan rerata harga buku dalam kategori hukum, ilmu kesehatan, dan teknologi?
 
-Cara untuk mengurangi variasi tersebut adalah dengan membuat lebih banyak kelompok usia. Misalnya, kita dapat membagi usia para guru tersebut menjadi empat kelompok usia seperti yang ditunjukkan pada @tbl-kel-usia-guru.
-
-| Kelompok Usia | Usia Guru (Tahun) |
-|:-------------:|-------------------|
-|       1       | 20 - 30           |
-|       2       | 31 - 40           |
-|       3       | 41 - 50           |
-|       4       | \> 50             |
-
-: Pembagian usia guru ke dalam empat kelompok usia. {#tbl-kel-usia-guru}
+Berdasarkan pengamatan awal, saya menduga bahwa terdapat perbedaan rerata harga buku dalam kategori hukum, ilmu kesehatan, dan teknologi. Melalui artikel ini, saya coba akan mendemonstrasikan bagaimana menguji dugaan saya tersebut dengan menggunakan uji hipotesis.
 
 # Data dan Konteksnya
 
-Untuk menguji klaim di atas, kita buat data sampel acak sederhana dari set data yang dibuat oleh Prasetiyo dkk. [@prasetiyo2022]. Set data tersebut berukuran besar, yaitu 901. Untuk itu, kita buat sampel acak sederhana dari set data tersebut sedemikian sehingga ukuran sampel di setiap kelompok usinya secara berturut-turut adalah 30, 29, 19, dan 15.
+Untuk menguji dugaan saya sebelumnya, saya memutuskan untuk memilih 10 buku secara acak untuk setiap kategori bukunya dari Amazon.com dan mencatat harga buku-buku tersebut. Data ini selanjutnya dinamai `sampel_buku` dan statistik deskriptif `harga` bukunya untuk setiap `kategori`-nya disajikan pada @tbl-sampel-harga-buku [bandingkan dengan @Kristanto2021b, p. 95]
 
 ```{r}
+#| label: tbl-sampel-harga-buku
+#| tbl-cap: Statistik deskriptif `harga` buku (dalam ribu rupiah) untuk setiap jenis bukunya dalam data `sampel_buku`.
+
+sampel_buku <- tribble(
+  ~kategori,	~harga,
+  'Hukum',	2298.3,
+  'Hukum',	2148.9,
+  'Hukum',	1949.4,
+  'Hukum',	2291,
+  'Hukum',	2002,
+  'Hukum',	2000.6,
+  'Hukum',	2419,
+  'Hukum',	2226,
+  'Hukum',	2036.4,
+  'Hukum',	2148.9,
+  'Ilmu Kesehatan',	2163,
+  'Ilmu Kesehatan',	2010.9,
+  'Ilmu Kesehatan',	1939.8,
+  'Ilmu Kesehatan',	2148.1,
+  'Ilmu Kesehatan',	1864.8,
+  'Ilmu Kesehatan',	2192.7,
+  'Ilmu Kesehatan',	1612.6,
+  'Ilmu Kesehatan',	1807.2,
+  'Ilmu Kesehatan',	1864.8,
+  'Ilmu Kesehatan',	1963.5,
+  'Teknologi',	1976.5,
+  'Teknologi',	1854.6,
+  'Teknologi',	1515.5,
+  'Teknologi',	1715,
+  'Teknologi',	1769.5,
+  'Teknologi',	2011,
+  'Teknologi',	1875.9,
+  'Teknologi',	2023.8,
+  'Teknologi',	1572.5,
+  'Teknologi',	1863.4,
+)
+
+sampel_buku %>% 
+  group_by(kategori) %>% 
+  summarise(n = n(),
+            M = mean(harga),
+            SD = sd(harga),
+            Min = min(harga),
+            Maks = max(harga)) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE,
+      col.names = c("Kategori", "n",
+                    "M", "SD",
+                    "Min", "Maks")
+      ) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "hold_position"),
+                full_width = FALSE)
+```
+
+@tbl-sampel-harga-buku tersebut sepertinya mengonfirmasi dugaan saya bahwa terdapat perbedaan rerata `harga` buku antar-`kategori`-nya. Tapi tunggu dulu! Ingat, data yang kita miliki tersebut merupakan data sampel. Perbedaan rerata `harga` dalam sampel tersebut belum dapat menunjukkan adanya perbedaan rerata `harga` buku di populasinya. Ketika rerata `harga` buku di populasinya sama sekalipun, besar kemungkinkan sampel-sampel yang kita dapatkan dari populasi tersebut memiliki rerata yang berbeda. Lalu bagaimana kita dapat menguji dugaan saya di awal? Mari kita lanjut di bagian berikutnya!
+
+# Eksplorasi Data dan Uji Randomisasi
+
+Untuk lebih mengenal data `sampel_buku`, kita dapat memvisualisasikan distribusi `harga` buku di setiap `kategori`-nya. Distribusi tersebut ditunjukkan pada @fig-violin-harga-buku.
+
+```{r}
+#| label: fig-violin-harga-buku
+#| fig-cap: Distribusi `harga` buku di setiap `kategori` dalam data `sampel_buku`.
+#| fig-asp: 0.5625
+
+sampel_buku %>% 
+  ggplot(aes(x = kategori, y = harga,
+             color = kategori)) +
+  geom_violin() +
+  stat_summary(fun = "mean") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "bottom")
+```
+
+Untuk menguji dugaan di awal, kita asumsikan dulu bahwa rerata `harga` semua buku di kategori-kategori tersebut sama. Saya tekankan, asumsi tersebut melibatkan rerata populasi.
+
+Dengan asumsi tersebut, berapa peluang saya mengambil sampel dari populasi tersebut secara acak dan memperoleh data seperti pada `sampel_buku` atau yang lebih ekstrem? Jika peluangnya cukup besar, kita tidak dapat menolak asumsi tersebut. Sebaliknya, jika peluangnya sangat kecil, alias kita hampir mustahil mendapatkan sampel seperti `sampel_buku` tersebut atau yang lebih ekstrem, asumsi tersebut kita tolak.
+
+Jika asumsi tersebut kita anggap benar, yaitu rerata `harga` buku di setiap kategorinya sama, dan kita ambil 10 buku di setiap kategorinya secara acak, 100 kemungkinan distribusinya sampel-sampelnya ditunjukkan pada @fig-samp-sim-buku.
+
+```{r}
+#| warning: false
+#| label: fig-samp-sim-buku
+#| fig-cap: Distribusi 100 sampel hasil simulasi jika diasumsikan bahwa sampel-sampel tersebut diperoleh dari populasi yang rerata `harga` buku-buku di setiap `kategori`-nya sama.
+#| fig-asp: 1
+
+set.seed(503)
+
+samp100_sim_buku <- sampel_buku %>% 
+  specify(harga ~ kategori) %>% 
+  hypothesise(null = "independence") %>% 
+  generate(reps = 100, type = "permute")
+
+samp100_sim_buku %>% 
+  mutate(baris = ceiling(replicate/10),
+         kolom = (replicate %% 10) + 1) %>% 
+  ggplot(aes(x = kategori, y = harga,
+             color = kategori)) +
+  geom_violin() +
+  stat_summary(fun = "mean") +
+  facet_grid(baris ~ kolom) +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "bottom")
+```
+
+Jika dibandingkan dengan 'teman-temannya' pada @fig-samp-sim-buku, apakah sampel yang kita miliki, yaitu `sampel_buku` yang distribusinya ditunjukkan pada @fig-violin-harga-buku, merupakan sampel yang biasa atau sampel yang hampir mustahil untuk diperoleh? Pertanyaan ini sulit untuk dijawab jika kita hanya mengandalkan pengamatan visual saja. Kita perlu sebuah statistik yang mengindikasikan seberapa beragam rerata `harga` buku di tiap-tiap `kategori`-nya untuk setiap sampelnya. Statistik tersebut adalah statistik $F$. Semakin besar statistik ini, semakin beragam rerata `harga` buku tiap `kategori`-nya.
+
+Statistik $F$ untuk sampel yang kita miliki dapat dihitung dengan kode seperti berikut.
+
+```{r}
+#| label: stat-F-sampel-buku
+#| code-fold: false
+
+F_sampel_buku <- sampel_buku %>% 
+  specify(harga ~ kategori) %>% 
+  hypothesise(null = "independence") %>% 
+  calculate(stat = "F")
+
+as.numeric(F_sampel_buku[1, 1])
 
 ```
+
+Statistik $F$ untuk setiap 100 sampel pada @fig-samp-sim-buku dapat kita hitung dan kita visualisasikan distribusinya. Distribusi $F$ seratus sampel tersebut dapat kita gunakan untuk menilai `sampel_buku` yang kita miliki. Untuk itu, kita perlu menggambarkan distribusi $F$ keseratus sampel tersebut bersama dengan statistik $F$ `sampel_buku` yang kita miliki. Hal ini ditunjukkan pada @fig-P-buku.
+
+```{r}
+#| label: fig-P-buku
+#| fig-cap: Distribusi $F$ keseratus sampel yang digambar bersama dengan $F$ `sampel_buku` yang kita miliki.
+#| fig-asp: 0.5
+
+dist_samp100_sim_buku <- samp100_sim_buku %>%
+  calculate(stat = "F")
+
+visualise(dist_samp100_sim_buku) +
+  shade_p_value(obs_stat = F_sampel_buku,
+                direction = "greater") +
+  theme_bw() +
+  theme(title = element_blank()) +
+  labs(x = "F",
+       y = "Frekuensi")
+```
+
+Berdasarkan @fig-P-buku, kita dapat melihat bahwa tidak ada sampel lain (dari keseratus sampel tersebut) yang nilai $F$-nya sama dengan atau lebih dari nilai $F$ `sampel_buku` yang kita miliki. Hal ini menunjukkan bahwa peluang untuk mendapatkan sampel seperti `sampel_buku` tersebut nilainya sangat kecil!
+
+Agar kita semakin yakin, kita simulasikan lagi 9.900 sampel tambahan agar total sampel simulasinya menjadi 10.000. Distribusi $F$ kesepuluhribu sampel tersebut bersama dengan distribusi $F$ `sampel_buku` ditunjukkan pada @fig-P-10000-buku.
+
+```{r}
+#| label: fig-P-10000-buku
+#| fig-cap: Distribusi $F$ 10.000 sampel yang digambar bersama dengan $F$ `sampel_buku` yang kita miliki.
+#| fig-asp: 0.5
+
+set.seed(503)
+
+dist_samp9900_sim_buku <- sampel_buku %>% 
+  specify(harga ~ kategori) %>% 
+  hypothesise(null = "independence") %>% 
+  generate(reps = 9900, type = "permute") %>% 
+  calculate(stat = "F")
+
+dist_samp_sim_buku <- rbind(
+  dist_samp100_sim_buku, dist_samp9900_sim_buku
+)
+
+dist_samp_sim_buku %>% visualise() +
+  shade_p_value(obs_stat = F_sampel_buku,
+                direction = "greater") +
+  theme_bw() +
+  theme(title = element_blank()) +
+  labs(x = "F",
+       y = "Frekuensi")
+```
+
+Dari 10.000 sampel hasil simulasi tersebut, apakah ada sampel yang statistik $F$-nya lebih dari atau sama dengan statistik $F$ `sampel_buku`? Mari kita selidiki.
+
+```{r}
+#| code-fold: false
+
+dist_samp_sim_buku %>% 
+  filter(stat >= as.numeric(F_sampel_buku[1, 1])) %>% 
+  nrow()
+```
+
+Ternyata ada 10 dari 10.000 sampel hasil simulasi yang statistik $F$-nya lebih dari atau sama dengan statistik $F$ `sampel_buku`. Artinya, dengan mengasumsikan bahwa rerata harga bukunya sama di setiap kategorinya, kita mendapatkan bahwa peluang untuk mendapatkan sampel yang perbedaan rerata `harga` buku di setiap `kategori`-nya seekstrem atau lebih ekstrem dari `sampel_buku` yang kita miliki sangatlah kecil, yaitu sekitar 0,01. Oleh karena itu, kita yakin untuk menolak asumsi tersebut. Jadi, `sampel_buku` tersebut merupakan bukti yang cukup untuk mendukung dugaan awal saya, yaitu bahwa terdapat perbedaan rerata `harga` buku di `kategori` hukum, ilmu kesehatan, dan teknologi.
+
+# Distribusi $F$
 
 # Daftar Rujukan
 
