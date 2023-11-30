@@ -1,0 +1,68 @@
+---
+title: "Inferensi untuk Membandingkan Banyak Rerata"
+subtitle: "Menggunakan *Analysis of Variance* (ANOVA) untuk Membandingkan Rerata"
+abstract: |
+  Banyak permasalah statistik yang bertujuan untuk membandingkan tiga atau lebih rerata populasi ketika diketahui rerata sampelnya. Artikel ini bertujuan untuk mendemonstrasikan penggunaan ANOVA untuk membandingkan banyak rerata serta memberikan penjelasan logika di balik metode statistik tersebut.
+date: 2023/11/28
+author:
+  - name: Yosep Dwi Kristanto
+    url: https://people.usd.ac.id/~ydkristanto/
+    affiliation: Pendidikan Matematika, Universitas Sanata Dharma, Yogyakarta
+    affiliation-url: https://www.usd.ac.id/
+language: _language-id.yml
+type: webpage
+container-title: "Metode Statistik"
+format:
+  html:
+    toc: true
+    number-sections: true
+    keywords: "normalitas, selang kepercayaan, uji hipotesis, ANOVA"
+    page-layout: article
+    code-fold: true
+    code-tools: true
+    code-line-numbers: true
+    anchor-sections: true
+    smooth-scroll: true
+execute: 
+  echo: true
+  warning: false
+bibliography: references.bib
+csl: apa.csl
+google-scholar: true
+---
+
+# Usia Guru dan Kapabilitasnya terhadap Teknologi Komputer
+
+Seringkali kita mendengar pernyataan bahwa guru yang lebih senior cenderung kurang memiliki kemampuan teknis terhadap teknologi komputer. Untuk menguji klaim ini, kita dapat menilai kemampuan teknis para guru di setiap kategori umurnya terhadap teknologi komputer.
+
+Penilaian terhadap kemampuan teknis guru tersebut pada umumnya sulit untuk dilakukan, khususnya jika banyaknya guru yang dinilai cukup besar. Salah satu alternatifnya adalah dengan menyelidiki keyakinan para guru tersebut terkait seberapa besar kemampuan teknis mereka dalam menggunakan teknologi komputer. Dengan cara ini, kita dapat membagikan angket terhadap guru untuk menanyakan keyakinan terhadap kemampuan teknis mereka masing-masing.
+
+Oleh karena itu, kita akan menguji klaim berikut ini.
+
+> Terdapat perbedaan besarnya keyakinan guru terhadap kemampuan teknisnya dalam menggunakan teknologi komputer antarkelompok usianya.
+
+Klaim tersebut memuat dia variabel. Pertama adalah keyakinan guru terhadap kemampuan teknisnya dalam menggunakan teknologi komputer. Kedua adalah kelompok usia guru tersebut. Terdapat banyak kemungkinan cara untuk membagi kelompok usia guru. Cara yang cukup sederhana adalah dengan membaginya menjadi dua kategori saja, misalnya kelompok umur junior dan senior. Dengan cara ini, kita mungkin menduga akan terdapat variasi yang relatif besar di setiap kelompok umurnya.
+
+Cara untuk mengurangi variasi tersebut adalah dengan membuat lebih banyak kelompok usia. Misalnya, kita dapat membagi usia para guru tersebut menjadi empat kelompok usia seperti yang ditunjukkan pada @tbl-kel-usia-guru.
+
+| Kelompok Usia | Usia Guru (Tahun) |
+|:-------------:|-------------------|
+|       1       | 20 - 30           |
+|       2       | 31 - 40           |
+|       3       | 41 - 50           |
+|       4       | \> 50             |
+
+: Pembagian usia guru ke dalam empat kelompok usia. {#tbl-kel-usia-guru}
+
+# Data dan Konteksnya
+
+Untuk menguji klaim di atas, kita buat data sampel acak sederhana dari set data yang dibuat oleh Prasetiyo dkk. [@prasetiyo2022]. Set data tersebut berukuran besar, yaitu 901. Untuk itu, kita buat sampel acak sederhana dari set data tersebut sedemikian sehingga ukuran sampel di setiap kelompok usinya secara berturut-turut adalah 30, 29, 19, dan 15.
+
+```{r}
+
+```
+
+# Daftar Rujukan
+
+::: {#refs}
+:::
