@@ -26,6 +26,7 @@ format:
 execute: 
   echo: true
   warning: false
+  freeze: auto
 bibliography: references.bib
 csl: apa.csl
 google-scholar: true
@@ -52,7 +53,7 @@ Berdasarkan pengamatan awal, saya menduga bahwa terdapat perbedaan rerata harga 
 
 # Data dan Konteksnya
 
-Untuk menguji dugaan saya sebelumnya, saya memutuskan untuk memilih 10 buku secara acak untuk setiap kategori bukunya dari Amazon.com dan mencatat harga buku-buku tersebut. Data ini selanjutnya dinamai `sampel_buku` dan statistik deskriptif `harga` bukunya untuk setiap `kategori`-nya disajikan pada @tbl-sampel-harga-buku [bandingkan dengan @Kristanto2021b, p. 95]
+Untuk menguji dugaan saya sebelumnya, saya memutuskan untuk memilih 10 buku secara acak untuk setiap kategori bukunya dari Amazon.com dan mencatat harga buku-buku tersebut. Data ini selanjutnya dinamai `sampel_buku` dan statistik deskriptif `harga` bukunya untuk setiap `kategori`-nya disajikan pada [@tbl-sampel-harga-buku; bandingkan dengan @Kristanto2021b, p. 95]
 
 ```{r}
 #| label: tbl-sampel-harga-buku
@@ -249,6 +250,129 @@ dist_samp_sim_buku %>%
 Ternyata ada 10 dari 10.000 sampel hasil simulasi yang statistik $F$-nya lebih dari atau sama dengan statistik $F$ `sampel_buku`. Artinya, dengan mengasumsikan bahwa rerata harga bukunya sama di setiap kategorinya, kita mendapatkan bahwa peluang untuk mendapatkan sampel yang perbedaan rerata `harga` buku di setiap `kategori`-nya seekstrem atau lebih ekstrem dari `sampel_buku` yang kita miliki sangatlah kecil, yaitu sekitar 0,01. Oleh karena itu, kita yakin untuk menolak asumsi tersebut. Jadi, `sampel_buku` tersebut merupakan bukti yang cukup untuk mendukung dugaan awal saya, yaitu bahwa terdapat perbedaan rerata `harga` buku di `kategori` hukum, ilmu kesehatan, dan teknologi.
 
 # Distribusi $F$
+
+Pada bagian sebelumnya kita telah mengenal statistik $F$. Statistik ini digunakan untuk melihat seberapa beragam rerata-rerata dalam sampelnya. Statistik ini merupakan rasio antara variansi berbobot rerata-rerata tersebut dan besarnya variabilitas antarrerata tersebut yang diharapkan ketika hipotesis nolnya diasumsikan benar. Pada umumnya nilai statistik ini dihitung secara langsung dengan menggunakan komputer. Akan tetapi, jika Anda tertarik untuk mengetahui bagaimana cara menghitung statistik tersebut, silakan baca kolom berikut. Penjelasan lebih detail lagi tentang statistik $F$ dapat ditemukan di Kristanto [-@Kristanto2021b, pp. 58-66].
+
+::: {#hitung-stat-f style="padding: 10px 15px; border: 1px solid;"}
+### Bagaimana Menghitung $F$? {.unnumbered .unlisted}
+
+Variansi berbobot rerata-rerata dalam sampel dihitung dengan menggunakan kuadrat rerata faktor atau $MSTR$. Nilai $MSTR$ tersebut memiliki derajat bebas $\text{df}_{\text{TR}} = k - 1$. @eq-mstr berikut digunakan untuk menghitung $MSTR$.
+
+$$ MSTR = \frac{SSTR}{\text{df}_{\text{TR}}} $$ {#eq-mstr}
+
+$SSTR$ merupakan jumlah kuadrat faktor. Misalkan $\bar{x}$ menyatakan rerata nilai hasil di semua kelompoknya, $SSTR$ dapat dihitung dengan @eq-sstr berikut.
+
+$$ SSTR = \sum_{i = 1}^{k} n_i \left ( \bar{x}_i - \bar{x} \right )^2 $$ {#eq-sstr}
+
+Besarnya variabilitas antarrerata yang diharapkan dalam sampel ketika hipotesis nolnya diasumsikan benar disebut dengan kuadrat rerata galat atau $MSE$. Nilai ini memiliki derajat bebas $\text{df}_{\text{E}} = n - k$. Nilai $MSE$ tersebut dihitung dengan @eq-mse berikut.
+
+$$ MSE = \frac{SSE}{\text{df}_{\text{E}}} $$ {#eq-mse}
+
+$SSE$ merupakan jumlah kuadrat galat yang ditentukan dengan @eq-sse berikut.
+
+$$ SSE = \sum_{i = 1}^{k} \left( n_i - 1 \right ) s_i^2 $$ {#eq-sse}
+
+Statistik $F$ merupakan hasil bagi $MSTR$ oleh $MSE$, yang dituliskan dalam @eq-f-aov berikut.
+
+$$ F = \frac{MSTR}{MSE} $$ {#eq-f-aov}
+
+Sekarang kita gunakan rumus-rumus tersebut untuk menentukan statistik $F$ dari sampel kita, yaitu `sampel_buku`. Sampel tersebut berukuran $n = 30$ dan memiliki $k = 3$ kelompok. Rerata `harga` semua buku dalam sampel tersebut dapat dhitung seperti berikut.
+
+```{r}
+#| code-fold: false
+m_harga_buku <- mean(sampel_buku$harga)
+
+m_harga_buku
+```
+
+Dari perhitungan tersebut, kita peroleh $\bar{x} = \text{1975,52}$. Selanjutnya kita tentukan $SSTR$. Salah satu caranya adalah dengan bantuan tabel, seperti pada @tbl-menuju-sstr berikut ini.
+
+```{r}
+#| label: tbl-menuju-sstr
+#| tbl-cap: Tabel yang digunakan sebagai bantuan untuk menghitung $n_i \left( \bar{x}_i - \bar{x} \right)^2$ di setiap kelompok/kategorinya. Judul kolom 1 sampai 6 secara berturut-turut adalah `kategori`, $n_i$, $\bar{x}_i$, $\bar{x}$, $\left( \bar{x}_i - \bar{x} \right)^2$, dan $n_i \left( \bar{x}_i - \bar{x} \right)^2$.
+
+sampel_buku_b1 <- sampel_buku %>%
+  group_by(kategori) %>%
+  summarise(n_i = n(),
+            M_i = mean(harga)) %>%
+  mutate(M = rep(m_harga_buku,3),
+         "(M_i-M)^2" = (M_i - M)^2,
+         "n_i(M_i-M)^2" = n_i * (M_i - M)^2)  
+
+sampel_buku_b1 %>%
+  kbl(linesep = "",
+      booktabs = TRUE,
+      format = "html",
+      col.names = c("1", "2", "3", "4", "5", "6"),
+      escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("basic"),
+                full_width = FALSE)
+```
+
+Nilai $SSTR$ dapat dihitung dengan menjumlahkan semua nilai dalam kolom keenam (atau $n_i\left(\bar{x}_i-\bar{x}\right)^2$) pada @tbl-menuju-sstr. Setelah itu, kita dapat menghitung $MSTR$ dengan membagi $SSTR$ tersebut dengan $\text{df}_{\text{TR}} = 3 - 1 = 2$.
+
+```{r}
+#| code-fold: false
+
+sstr_buku <- sum(sampel_buku_b1$`n_i(M_i-M)^2`)
+mstr_buku <- sstr_buku / 2
+
+sstr_buku
+mstr_buku
+```
+
+Dengan demikian, kita peroleh $SSTR \approx \text{564005,9}$ dan $MSTR \approx 282003$. Berikutnya kita tentukan $MSE$.
+
+```{r}
+#| label: tbl-menuju-sse
+#| tbl-cap: Tabel yang digunakan sebagai bantuan untuk menghitung $\left( n_i - 1 \right) s_i^2$ di setiap kelompok/kategorinya. Judul kolom 1 sampai 4 secara berturut-turut adalah `kategori`, $n_i$, $s_i^2$, dan $\left( n_i - 1 \right) s_i^2$.
+
+sampel_buku_b2 <- sampel_buku %>%
+  group_by(kategori) %>%
+  summarise(n_i = n(),
+            `s_i^2` = var(harga)) %>%
+  mutate(`(n_i - 1) s_i^2` = (n_i - 1) * `s_i^2`)  
+
+sampel_buku_b2 %>%
+  kbl(linesep = "",
+      booktabs = TRUE,
+      format = "html",
+      col.names = c("1", "2", "3", "4"),
+      escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("basic"),
+                full_width = FALSE)
+```
+
+$SSE$ dihitung dengan menjumlahkan semua sel dalam kolom keempat atau $\left(n_i-1\right) s_i^2$ sehingga nilai $MSE$ dapat diperoleh dengan membagi $SSE$ tersebut dengan $\text{df}_{\text{E}} = 30 - 3 = 27$.
+
+```{r}
+#| code-fold: false
+
+sse_buku <- sum(sampel_buku_b2$`(n_i - 1) s_i^2`)
+mse_buku <- sse_buku / 27
+
+sse_buku
+mse_buku 
+```
+
+Dengan demikian, statistik $F$ dapat ditentukan seperti berikut.
+
+```{r}
+#| code-fold: false
+
+F_buku <- mstr_buku / mse_buku
+
+F_buku
+```
+
+Nilai $F\approx\text{9,645871}$ tersebut sama dengan yang kita peroleh pada bagian sebelumnya.
+:::
 
 # Daftar Rujukan
 
