@@ -2,7 +2,7 @@
 title: "Inferensi untuk Membandingkan Banyak Rerata"
 subtitle: "Menggunakan *Analysis of Variance* (ANOVA) untuk Membandingkan Rerata"
 abstract: |
-  Banyak permasalah statistik yang bertujuan untuk membandingkan tiga atau lebih rerata populasi ketika diketahui rerata sampelnya. Artikel ini bertujuan untuk mendemonstrasikan penggunaan uji ANOVA untuk membandingkan banyak rerata serta memberikan penjelasan logika di balik metode statistik tersebut secara ringkas, termasuk dengan demonstrasi pemeriksaan kondisi-kondisi atau asumsi-asumsi yang diperlukan sebelum melakukan uji ANOVA tersebut. Artikel ini juga menjelaskan bagaimana melakukan uji perbandingan berganda Tukey yang digunakan untuk mendeteksi pasangan rerata mana yang berbeda. Selain itu, uji Kruskal-Wallis yang merupakan uji nonparametrik yang menjadi alternatif dari uji ANOVA juga dijelaskan secara singkat dan didemonstrasikan dalam artikel ini. Semua uji hipotesis tersebut didemonstrasikan dengan menggunakan pemrograman R.
+  Banyak permasalahan statistik yang bertujuan untuk membandingkan tiga atau lebih rerata populasi ketika diketahui rerata sampelnya. Artikel ini bertujuan untuk mendemonstrasikan penggunaan uji ANOVA untuk membandingkan banyak rerata serta memberikan penjelasan logika di balik metode statistik tersebut secara ringkas, termasuk dengan demonstrasi pemeriksaan kondisi-kondisi atau asumsi-asumsi yang diperlukan sebelum melakukan uji ANOVA tersebut. Artikel ini juga menjelaskan bagaimana melakukan uji perbandingan berganda Tukey yang digunakan untuk mendeteksi pasangan rerata mana yang berbeda. Selain itu, uji Kruskal-Wallis dan uji Dunn yang merupakan alternatif dari uji ANOVA dan perbandingan berganda Tukey juga dijelaskan secara singkat dan didemonstrasikan dalam artikel ini. Semua uji hipotesis tersebut didemonstrasikan dengan menggunakan pemrograman R.
 date: 2023/11/28
 author:
   - name: Yosep Dwi Kristanto
@@ -16,7 +16,7 @@ format:
   html:
     toc: true
     number-sections: true
-    keywords: "normalitas, homogenitas variansi, uji hipotesis, ANOVA, Kruskal-Wallis, Tukey, R"
+    keywords: "normalitas, Shapiro-Wilk, homogenitas variansi, Levene, uji hipotesis, ANOVA, distribusi F, Kruskal-Wallis, Tukey, Dunn, R"
     page-layout: article
     code-fold: true
     code-tools: true
@@ -40,7 +40,7 @@ library(knitr)
 library(kableExtra)
 library(infer)
 library(ggpubr)
-library(car)
+library(rstatix)
 ```
 
 # Harga Buku
@@ -167,13 +167,16 @@ samp100_sim_buku %>%
   stat_summary(fun = "mean") +
   facet_grid(baris ~ kolom) +
   theme_bw() +
+  scale_color_brewer(palette = "Dark2") +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         legend.position = "bottom")
 ```
 
-Jika dibandingkan dengan 'teman-temannya' pada @fig-samp-sim-buku, apakah sampel yang kita miliki, yaitu `sampel_buku` yang distribusinya ditunjukkan pada @fig-violin-harga-buku, merupakan sampel yang biasa atau sampel yang hampir mustahil untuk diperoleh?
+Jika dibandingkan dengan 'teman-temannya'[^1] pada @fig-samp-sim-buku, apakah sampel yang kita miliki, yaitu `sampel_buku` yang distribusinya ditunjukkan pada @fig-violin-harga-buku, merupakan sampel yang biasa atau sampel yang hampir mustahil untuk diperoleh?
+
+[^1]: Sampel-sampel lain yang ukurannya sama dan diambil dari populasi yang sama.
 
 Pertanyaan tersebut sulit untuk dijawab jika kita hanya mengandalkan pengamatan visual saja. Kita perlu sebuah statistik yang mengindikasikan seberapa beragam rerata `harga` buku di tiap-tiap `kategori`-nya untuk setiap sampelnya. Statistik tersebut adalah statistik $F$. Semakin besar statistik ini, semakin beragam rerata `harga` buku tiap `kategori`-nya.
 
@@ -388,21 +391,36 @@ F_buku
 Nilai $F\approx\text{9,645871}$ tersebut sama dengan yang kita peroleh pada bagian sebelumnya.
 :::
 
-Ketika statistik $F$ dari semua kemungkinan sampel yang berukuran $n$ dan memiliki $k$ kelompok dihimpun jadi satu, kita mendapatkan distribusi sampling statistik $F$. Jika hipotesis nol diasumsikan benar dan sampel yang kita miliki memenuhi kondisi-kondisi tertentu, maka distribusi sampling tersebut bentuknya mengikuti distribusi $F$. Distribusi $F$ ini memiliki dua parameter, yaitu $\text{df}_1 = k - 1$ dan $\text{df}_2 = n - k$.
+Ketika statistik $F$ dari semua kemungkinan sampel yang berukuran $n$ dan memiliki $k$ kelompok dihimpun jadi satu, kita mendapatkan distribusi sampling statistik $F$. Jika hipotesis nol diasumsikan benar dan sampel yang kita miliki memenuhi kondisi-kondisi tertentu, maka distribusi sampling tersebut bentuknya mengikuti model matematis dari distribusi $F$ (selanjutnya kita sebut saja sebagai distribusi $F$). Distribusi $F$ ini memiliki dua parameter, yaitu $\text{df}_1 = k - 1$ dan $\text{df}_2 = n - k$.
 
-Misalnya, jika kita memiliki sampel yang berukuran $n = 30$ dan sampel tersebut memuat $k = 3$ kelompok (seperti `sampel_buku` yang kita gunakan sebelumnya), maka distribusi $F$-nya memiliki bentuk seperti yang ditunjukkan pada @fig-dist-F-2-27 berikut.
+@fig-contoh-dist-F berikut menyajikan beberapa contoh distribusi $F$ bersama dengan derajat-derajat bebasnya.
 
 ```{r}
-#| label: fig-dist-F-2-27
-#| fig-cap: Distribusi $F$ dengan $\text{df}_1 = 2$ dan $\text{df}_2 = 27$.
+#| label: fig-contoh-dist-F
+#| fig-cap: Beberapa contoh distribusi $F$ dengan derajat-derajat bebasnya.
 #| fig-asp: 0.5625
 
-ggplot(data.frame(x = c(0, 10)),
+ggplot(data.frame(x = c(0, 5)),
        aes(x = x)) +
   geom_function(fun = df,
                 args = list(df1 = 2, df2 = 27),
-                linewidth = 1) +
+                linewidth = 1,
+                aes(color = "df1 = 2, df2 = 27")) +
+  geom_function(fun = df,
+                args = list(df1 = 3, df2 = 117),
+                linewidth = 1,
+                aes(color = "df1 = 3, df2 = 117")) +
+  geom_function(fun = df,
+                args = list(df1 = 5, df2 = 27),
+                linewidth = 1,
+                aes(color = "df1 = 5, df2 = 27")) +
+  geom_function(fun = df,
+                args = list(df1 = 8, df2 = 117),
+                linewidth = 1,
+                aes(color = "df1 = 8, df2 = 117")) +
   theme_bw() +
+  scale_color_brewer("Derajat bebas",
+                     palette = "Dark2") +
   theme(axis.title.y = element_blank(),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank()) +
@@ -435,10 +453,11 @@ sampel_buku %>%
            color = "kategori",
            ggtheme = theme_bw(),
            xlab = "Teoretis",
-           ylab = "Sampel")
+           ylab = "Sampel") +
+  scale_color_brewer(palette = "Dark2")
 ```
 
-Berdasarkan @fig-QQ-kategori-buku tersebut, kita dapat mengasumsikan bahwa data `harga` buku di setiap `kategori`-nya berasal dari populasi yang berdistribusi normal. Kesimpulan ini dapat didukung oleh hasil uji Shapiro-Wilk seperti yang ditunjukkan pada @tbl-hasil-Shapiro-Wilk-harga-buku.
+Berdasarkan @fig-QQ-kategori-buku tersebut, kita dapat mengasumsikan bahwa data `harga` buku di setiap `kategori`-nya berasal dari populasi yang berdistribusi normal. Kesimpulan ini dapat didukung oleh hasil uji Shapiro-Wilk seperti yang ditunjukkan pada @tbl-hasil-Shapiro-Wilk-harga-buku. Uji Shapiro-Wilk tersebut menggunakan fungsi `shapiro_test()` yang merupakan bagian dari paket {rstatix}.
 
 ```{r}
 #| label: tbl-hasil-Shapiro-Wilk-harga-buku
@@ -446,8 +465,7 @@ Berdasarkan @fig-QQ-kategori-buku tersebut, kita dapat mengasumsikan bahwa data 
 
 sampel_buku %>% 
   group_by(kategori) %>% 
-  summarise(W = shapiro.test(harga)$statistic,
-            p = shapiro.test(harga)$p.value) %>% 
+  shapiro_test(harga) %>% 
   kbl(linesep = "",
       booktabs = TRUE) %>% 
   kable_styling(bootstrap_options = c("striped",
@@ -471,6 +489,7 @@ sampel_buku %>%
   ggplot(aes(x = kategori, y = harga)) +
   geom_boxplot(aes(color = kategori)) +
   theme_bw() +
+  scale_color_brewer(palette = "Dark2") +
   theme(legend.position = "none")
 ```
 
@@ -478,12 +497,13 @@ Berdasarkan @fig-boxplot-harga-kategori-buku, kita dapat melihat bahwa penyebara
 
 Kita dapat menguji asumsi tentang homogenitas variansi tersebut dengan menggunakan uji Levene. Hipotesis nol uji ini adalah variansi semua populasinya sama. Hipotesis alternatifnya menyatakan bahwa paling tidak ada satu pasang populasi yang variansinya berbeda.
 
-Untuk melakukannya, kita dapat menggunakan perintah `leveneTest()` yang merupakan salah satu fungsi dari paket {car}.
+Untuk melakukannya, kita dapat menggunakan perintah `levene_test()` yang merupakan salah satu fungsi dari paket {rstatix}.
 
 ```{r}
 #| code-fold: false
 
-leveneTest(harga ~ kategori, sampel_buku)
+sampel_buku %>% 
+  levene_test(harga ~ kategori)
 ```
 
 Karena kita mendapatkan nilai-*P* yang besar, yaitu 0,9524, maka kita gagal menolak hipotesis nol. Dengan demikian, sejalan dengan pengamatan kita terhadap @fig-boxplot-harga-kategori-buku, kita asumsikan `harga` di setiap `kategori` bukunya memiliki variansi yang sama.
@@ -504,11 +524,29 @@ Untuk melakukan uji ANOVA ini, kita gunakan tingkat signifikansi $\alpha = \text
 
 Data sampel yang kita miliki telah memenuhi tiga kondisi penggunaan distribusi $F$. Dengan demikian kita dapat memodelkan variabilitas statistiknya dengan distribusi tersebut.
 
-Sampel yang kita miliki, yaitu `sampel_buku`, berukuran $n = 30$ dan memiliki $k = 3$ kategori, maka distribusi $F$ yang kita gunakan memiliki $\text{df}_1 = 3 - 1 = 2$ dan $\text{df}_2 = 30 - 3 = 27$. Distribusinya ditunjukkan pada @fig-dist-F-2-27.
+Sampel yang kita miliki, yaitu `sampel_buku`, berukuran $n = 30$ dan memiliki $k = 3$ kategori, maka distribusi $F$ yang kita gunakan memiliki $\text{df}_1 = 3 - 1 = 2$ dan $\text{df}_2 = 30 - 3 = 27$. Distribusinya ditunjukkan pada @fig-dist-F-2-27 berikut.
+
+```{r}
+#| label: fig-dist-F-2-27
+#| fig-cap: Distribusi $F$ dengan $\text{df}_1 = 2$ dan $\text{df}_2 = 27.
+#| fig-asp: 0.5625
+
+data.frame(x = c(0, 12)) %>% 
+  ggplot(aes(x = x)) +
+  geom_function(fun = df,
+                args = list(df1 = 2, df2 = 27),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "F")
+
+```
 
 ## Statistik Uji dan Nilai-P
 
-Pada @sec-dist-f kita telah menghitung statistik $F$ dan didapatkan nilainya kurang lebih `r round(F_buku, 3)`. Berdasarkan statistik uji ini, kita dapat menghitung nilai-P dengan menggunakan kode berikut.
+Pada @sec-dist-f kita telah menghitung statistik $F$ dan didapatkan nilainya kurang lebih `r round(F_buku, 3)`. Berdasarkan statistik uji ini, kita dapat menghitung nilai-*P* dengan menggunakan kode berikut.
 
 ```{r}
 #| code-fold: false
@@ -518,7 +556,7 @@ P_buku
 
 ```
 
-Berdasarkan perhitungan itu kita peroleh nilai-*P* yang kurang lebih `r round(P_buku, 5)`.
+Berdasarkan perhitungan itu kita peroleh nilai-*P* yang kurang lebih `r format(round(P_buku, 5), nsmall = 5)`.
 
 Statistik uji $F$ dan nilai-*P* yang bersesuaian tersebut juga dapat dihitung dengan menggunakan fungsi `aov()` seperti berikut.
 
@@ -532,6 +570,14 @@ summary(ANOVA_buku)
 ## Kesimpulan dan Interpretasi {#sec-kesimpulan-anova}
 
 Karena kita mendapatkan nilai-P yang kurang dari tingkat signifikansinya, kita tolak hipotesis nolnya. Jadi, terdapat cukup bukti untuk mendukung dugaan saya bahwa paling tidak terdapat satu pasang kategori yang rerata harga bukunya berbeda.
+
+::: {.callout-note appearance="minimal"}
+### Catatan {.unnumbered .unlisted}
+
+Uji ANOVA yang baru saja kita lakukan menggunakan data sampel yang pembagian kelompoknya berdasarkan satu faktor. Oleh karena itu, uji ANOVA semacam itu disebut dengan uji ANOVA satu faktor. Jika pembagian kelompok dalam sampel yang kita miliki didasarkan pada dua faktor, kita perlu menggunakan uji ANOVA dua faktor.
+
+Misalnya, sebuah tim peneliti dari Universitas Maastricht [@leppink2011] menggunakan uji ANOVA dua faktor untuk menyelidiki pengaruh metode pengajaran dan kemampuan awal mahasiswa terhadap pemahaman konseptual statistik mereka. Selain itu, Van Gerven dkk. [-@vangerven2002] juga menggunakan metode statistik tersebut untuk mengetahui efisiensi program pelatihan yang mereka lakukan ditinjau dari usia pesertanya dan jenis permasalahan yang digunakan. Jika Anda tertarik untuk mempelajari uji ANOVA dua faktor, silakan baca Kristanto [-@Kristanto2021b, pp. 80-91].
+:::
 
 # Uji Hipotesis Pasca-ANOVA
 
@@ -548,6 +594,12 @@ TukeyHSD(ANOVA_buku)
 
 Berdasarkan uji perbandingan berganda Tukey tersebut, kita dapat menyimpulkan bahwa perbedaan rerata `harga` buku yang signifikan terjadi pada pasangan `kategori` Ilmu Kesehatan dan Hukum serta pasangan Teknologi dan Hukum. Untuk pasangan Teknologi dan Kesehatan, perbedaan reratanya tidak signifikan.
 
+::: callout-caution
+### Hati-Hati! {.unnumbered .unlisted}
+
+Ketika hipotesis nol dalam uji ANOVA ditolak, mungkin Anda bertanya-tanya mengapa kita perlu menggunakan uji perbandingan berganda? Anda mungkin juga berpikir bahwa akan lebih mudah jika kita menggunakan uji $t$ (atau uji nonparametrik alternatifnya) pada setiap pasangannya. Jangan keliru, cara seperti ini akan meningkatkan galat jenis pertamanya (yaitu kekeliruan menolak hipotesis nol ketika hipotesis tersebut benar) karena setiap uji $t$ yang kita lakukan bersesuaian dengan galat jenis pertama atau $\alpha$. Sebaliknya, kita perlu menggunakan uji perbandingan berganda karena galat jenis pertama uji ini sifatnya 'sepaket', berapapun pasangan yang kita bandingkan.
+:::
+
 # Uji Nonparametrik Alternatif
 
 Uji ANOVA memiliki alternatif, yaitu uji Kruskal-Wallis. Berbeda dengan ANOVA, uji Kruskal-Wallis tidak mempersyaratkan normalitas dan homogenitas variansinya. Uji Kruskal-Wallis ini hanya mempersyaratkan bahwa observasi-observasi dalam sampelnya bebas [selengkapnya baca @Kristanto2021b, pp. 241-248].
@@ -563,13 +615,106 @@ kruskal.test(harga ~ kategori, data = sampel_buku)
 
 Berdasarkan hasil tersebut, kita mendapatkan nilai-*P* yang sangat kecil, yaitu sekitar 0,0023. Kita tolak hipotesis nol bahwa median `harga` buku di setiap `kategori`-nya sama. Dengan demikian, minimal ada satu pasang `kategori` buku yang median `harga`-nya berbeda.
 
+Untuk mengetahui pasangan median mana yang tidak sama, kita dapat menggunakan uji perbandingan berganda Dunn. Uji ini dapat dilakukan di R dengan menggunakan fungsi `dunn_test()` yang tersedia dalam paket {rstatix}. Hasil uji Dunn ini ditampilkan pada @tbl-hasil-uji-dunn-buku.
+
+```{r}
+#| label: tbl-hasil-uji-dunn-buku
+#| tbl-cap: Ringkasan hasil uji Dunn terhadap `harga` buku untuk setiap pasang `kategori` dalam data `sampel_buku`.
+
+# Uji Dunn
+uji_dunn_buku <- sampel_buku %>% 
+  dunn_test(harga ~ kategori)
+
+# Membuat tabel untuk uji Dunn
+uji_dunn_buku %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "hold_position"),
+                full_width = FALSE)
+```
+
+Berdasarkan @tbl-hasil-uji-dunn-buku, kita simpulkan bahwa median `harga` buku pada pasangan `kategori` Hukum dan Teknologi berbeda secara signifikan, sedangkan pasangan lainnya tidak.
+
 # Catatan Penutup
 
 Melalui artikel ini kita telah mempelajari bagaimana menggunakan uji ANOVA untuk menguji apakah terdapat perbedaan rerata dari banyak kelompok. Untuk menggunakan uji ini, kita perlu memeriksa apakah kondisi-kondisinya terpenuhi. Kondisi-kondisi tersebut adalah bahwa observasi-observasi dalam sampelnya bebas, setiap kelompok dalam sampel berasal dari populasi yang berdistribusi normal, dan setiap kelompok tersebut juga memiliki variansi yang sama.
 
 Uji ANOVA tidak dapat mendeteksi pasangan rerata mana saja yang berbeda. Untuk mengetahuinya, kita perlu melakukan uji perbandingan berganda. Artikel ini juga telah membahas salah satu uji perbandingan berganda, yaitu uji perbandingan berganda Tukey. Dengan uji ini, kita mengetahui pasangan rerata yang berbeda.
 
-Terakhir, kita juga telah mempelajari uji hipotesis alternatif dari uji ANOVA, yaitu uji Kruskal-Wallis. Uji nonparametrik ini tidak memperlukan dua kondisi yang dipersyaratkan oleh ANOVA, yaitu tentang normalitas dan homogenitas variansi.
+Terakhir, kita juga telah mempelajari uji hipotesis alternatif dari uji ANOVA, yaitu uji Kruskal-Wallis. Uji nonparametrik ini tidak memperlukan dua kondisi yang dipersyaratkan oleh ANOVA, yaitu tentang normalitas dan homogenitas variansi. Lebih lanjut, kita juga telah melihat bagaimana menggunakan uji Dunn setelah dilakukan uji Kruskal-Wallis tersebut.
+
+# Latihan
+
+**Lama Sekolah.** Seorang peneliti melakukan survei secara acak kepada penduduk Jawa Barat, Jawa Tengah, dan Jawa Timur yang berumur 15 tahun ke atas tentang lama sekolah (dalam tahun). Hasil survei tersebut termuat dalam data `sampel_lama_sekolah`. Statistik deskriptifnya disajikan pada @tbl-stat-deskriptif-lama-sekolah.
+
+Dengan menggunakan tingkat signifikansi 0,05, apakah bisa dikatakan bahwa lama sekolah penduduk berumur 15 tahun ke atas di Jawa Barat, Jawa Tengah, dan Jawa Timur memiliki rerata yang sama?
+
+```{r}
+#| code-fold: false
+
+sampel_lama_sekolah <- tribble(
+  ~lama_sekolah, ~provinsi,
+  6.5,          "Jawa Barat",
+  12.2,         "Jawa Barat",
+  9.3,          "Jawa Barat",
+  11.2,         "Jawa Barat",
+  13.5,         "Jawa Barat",
+  3.4,          "Jawa Barat",
+  14.6,         "Jawa Barat",
+  6,            "Jawa Barat",
+  6.7,          "Jawa Barat",
+  2.6,          "Jawa Barat",
+  10.9,         "Jawa Tengah",
+  9.4,          "Jawa Tengah",
+  7.6,          "Jawa Tengah",
+  0.7,          "Jawa Tengah",
+  7.9,          "Jawa Tengah",
+  10.1,         "Jawa Tengah",
+  4.1,          "Jawa Tengah",
+  6.6,          "Jawa Tengah",
+  12.3,         "Jawa Tengah",
+  11.7,         "Jawa Tengah",
+  5.2,          "Jawa Timur",
+  9,            "Jawa Timur",
+  16.7,         "Jawa Timur",
+  0.4,          "Jawa Timur",
+  14.3,         "Jawa Timur",
+  8,            "Jawa Timur",
+  7,            "Jawa Timur",
+  12.5,         "Jawa Timur",
+  9.2,          "Jawa Timur",
+  1.2,          "Jawa Timur"
+)
+
+```
+
+```{r}
+#| label: tbl-stat-deskriptif-lama-sekolah
+#| tbl-cap: Statistik deskriptif `lama-sekolah` penduduk berusia 15 tahun ke atas di tiap `provinsi`.
+
+sampel_lama_sekolah %>% 
+  group_by(provinsi) %>% 
+  summarise(
+    n = n(),
+    M = mean(lama_sekolah),
+    SD = sd(lama_sekolah),
+    Min = min(lama_sekolah),
+    Maks = max(lama_sekolah)
+  ) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "hold_position"),
+                full_width = FALSE)
+
+```
 
 # Daftar Rujukan
 
