@@ -2,7 +2,7 @@
 title: "Inferensi untuk Membandingkan Banyak Rerata"
 subtitle: "Menggunakan *Analysis of Variance* (ANOVA) untuk Membandingkan Rerata"
 abstract: |
-  Banyak permasalah statistik yang bertujuan untuk membandingkan tiga atau lebih rerata populasi ketika diketahui rerata sampelnya. Artikel ini bertujuan untuk mendemonstrasikan penggunaan ANOVA untuk membandingkan banyak rerata serta memberikan penjelasan logika di balik metode statistik tersebut.
+  Banyak permasalah statistik yang bertujuan untuk membandingkan tiga atau lebih rerata populasi ketika diketahui rerata sampelnya. Artikel ini bertujuan untuk mendemonstrasikan penggunaan uji ANOVA untuk membandingkan banyak rerata serta memberikan penjelasan logika di balik metode statistik tersebut secara ringkas, termasuk dengan demonstrasi pemeriksaan kondisi-kondisi atau asumsi-asumsi yang diperlukan sebelum melakukan uji ANOVA tersebut. Artikel ini juga menjelaskan bagaimana melakukan uji perbandingan berganda Tukey yang digunakan untuk mendeteksi pasangan rerata mana yang berbeda. Selain itu, uji Kruskal-Wallis yang merupakan uji nonparametrik yang menjadi alternatif dari uji ANOVA juga dijelaskan secara singkat dan didemonstrasikan dalam artikel ini. Semua uji hipotesis tersebut didemonstrasikan dengan menggunakan pemrograman R.
 date: 2023/11/28
 author:
   - name: Yosep Dwi Kristanto
@@ -11,12 +11,12 @@ author:
     affiliation-url: https://www.usd.ac.id/
 language: _language-id.yml
 type: webpage
-container-title: "Metode Statistik"
+container-title: "Catatan Kuliah STAT503 Metode Statistik"
 format:
   html:
     toc: true
     number-sections: true
-    keywords: "normalitas, selang kepercayaan, uji hipotesis, ANOVA"
+    keywords: "normalitas, homogenitas variansi, uji hipotesis, ANOVA, Kruskal-Wallis, Tukey, R"
     page-layout: article
     code-fold: true
     code-tools: true
@@ -39,6 +39,8 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 library(infer)
+library(ggpubr)
+library(car)
 ```
 
 # Harga Buku
@@ -49,7 +51,7 @@ Pertanyaan tersebut pada akhirnya mendorong saya untuk merencanakan survei harga
 
 > Apakah ada perbedaan rerata harga buku dalam kategori hukum, ilmu kesehatan, dan teknologi?
 
-Berdasarkan pengamatan awal, saya menduga bahwa terdapat perbedaan rerata harga buku dalam kategori hukum, ilmu kesehatan, dan teknologi. Melalui artikel ini, saya coba akan mendemonstrasikan bagaimana menguji dugaan saya tersebut dengan menggunakan uji hipotesis.
+Berdasarkan pengamatan awal, saya menduga bahwa terdapat perbedaan rerata harga buku dalam kategori hukum, ilmu kesehatan, dan teknologi. Paling tidak terdapat satu pasang kategori yang rerata harga bukunya berbeda. Melalui artikel ini, saya coba akan mendemonstrasikan bagaimana menguji dugaan saya tersebut dengan menggunakan uji hipotesis.
 
 # Data dan Konteksnya
 
@@ -137,11 +139,11 @@ sampel_buku %>%
         legend.position = "bottom")
 ```
 
-Untuk menguji dugaan di awal, kita asumsikan dulu bahwa rerata `harga` semua buku di kategori-kategori tersebut sama. Saya tekankan, asumsi tersebut melibatkan rerata populasi.
+Untuk menguji dugaan di awal, kita asumsikan dulu bahwa rerata `harga` semua buku di kategori-kategori tersebut sama. Saya tekankan, asumsi tersebut melibatkan rerata populasi. Asumsi inilah yang disebut dengan hipotesis nol atau $H_0$.
 
-Dengan asumsi tersebut, berapa peluang saya mengambil sampel dari populasi tersebut secara acak dan memperoleh data seperti pada `sampel_buku` atau yang lebih ekstrem? Jika peluangnya cukup besar, kita tidak dapat menolak asumsi tersebut. Sebaliknya, jika peluangnya sangat kecil, alias kita hampir mustahil mendapatkan sampel seperti `sampel_buku` tersebut atau yang lebih ekstrem, asumsi tersebut kita tolak.
+Dengan asumsi tersebut, berapa peluang saya memperoleh data seperti pada `sampel_buku` atau yang lebih ekstrem jika saya mengambil sampel dari populasi tersebut secara acak? Jika peluangnya cukup besar, kita tidak dapat menolak asumsi tersebut. Sebaliknya, jika peluangnya sangat kecil, alias kita hampir mustahil mendapatkan sampel seperti `sampel_buku` tersebut atau yang lebih ekstrem, asumsi tersebut kita tolak.
 
-Jika asumsi tersebut kita anggap benar, yaitu rerata `harga` buku di setiap kategorinya sama, dan kita ambil 10 buku di setiap kategorinya secara acak, 100 kemungkinan distribusinya sampel-sampelnya ditunjukkan pada @fig-samp-sim-buku.
+Jika hipotesis nol tersebut kita anggap benar, yaitu rerata `harga` buku di setiap kategorinya sama, dan kita ambil 10 buku di setiap kategorinya secara acak, 100 kemungkinan distribusinya sampel-sampelnya ditunjukkan pada @fig-samp-sim-buku.
 
 ```{r}
 #| warning: false
@@ -171,7 +173,9 @@ samp100_sim_buku %>%
         legend.position = "bottom")
 ```
 
-Jika dibandingkan dengan 'teman-temannya' pada @fig-samp-sim-buku, apakah sampel yang kita miliki, yaitu `sampel_buku` yang distribusinya ditunjukkan pada @fig-violin-harga-buku, merupakan sampel yang biasa atau sampel yang hampir mustahil untuk diperoleh? Pertanyaan ini sulit untuk dijawab jika kita hanya mengandalkan pengamatan visual saja. Kita perlu sebuah statistik yang mengindikasikan seberapa beragam rerata `harga` buku di tiap-tiap `kategori`-nya untuk setiap sampelnya. Statistik tersebut adalah statistik $F$. Semakin besar statistik ini, semakin beragam rerata `harga` buku tiap `kategori`-nya.
+Jika dibandingkan dengan 'teman-temannya' pada @fig-samp-sim-buku, apakah sampel yang kita miliki, yaitu `sampel_buku` yang distribusinya ditunjukkan pada @fig-violin-harga-buku, merupakan sampel yang biasa atau sampel yang hampir mustahil untuk diperoleh?
+
+Pertanyaan tersebut sulit untuk dijawab jika kita hanya mengandalkan pengamatan visual saja. Kita perlu sebuah statistik yang mengindikasikan seberapa beragam rerata `harga` buku di tiap-tiap `kategori`-nya untuk setiap sampelnya. Statistik tersebut adalah statistik $F$. Semakin besar statistik ini, semakin beragam rerata `harga` buku tiap `kategori`-nya.
 
 Statistik $F$ untuk sampel yang kita miliki dapat dihitung dengan kode seperti berikut.
 
@@ -247,14 +251,24 @@ dist_samp_sim_buku %>%
   nrow()
 ```
 
-Ternyata ada 10 dari 10.000 sampel hasil simulasi yang statistik $F$-nya lebih dari atau sama dengan statistik $F$ `sampel_buku`. Artinya, dengan mengasumsikan bahwa rerata harga bukunya sama di setiap kategorinya, kita mendapatkan bahwa peluang untuk mendapatkan sampel yang perbedaan rerata `harga` buku di setiap `kategori`-nya seekstrem atau lebih ekstrem dari `sampel_buku` yang kita miliki sangatlah kecil, yaitu sekitar 0,01. Oleh karena itu, kita yakin untuk menolak asumsi tersebut. Jadi, `sampel_buku` tersebut merupakan bukti yang cukup untuk mendukung dugaan awal saya, yaitu bahwa terdapat perbedaan rerata `harga` buku di `kategori` hukum, ilmu kesehatan, dan teknologi.
+Ternyata ada 10 dari 10.000 sampel hasil simulasi yang statistik $F$-nya lebih dari atau sama dengan statistik $F$ `sampel_buku`. Artinya, dengan mengasumsikan bahwa rerata harga bukunya sama di setiap kategorinya, kita mendapatkan bahwa peluang untuk mendapatkan sampel yang perbedaan rerata `harga` buku di setiap `kategori`-nya seekstrem atau lebih ekstrem dari `sampel_buku` yang kita miliki sangatlah kecil, yaitu sekitar 0,01!
 
-# Distribusi $F$
+Terkait dengan hasil tersebut, kita memiliki dua pilihan kesimpulan sebagai berikut.
 
-Pada bagian sebelumnya kita telah mengenal statistik $F$. Statistik ini digunakan untuk melihat seberapa beragam rerata-rerata dalam sampelnya. Statistik ini merupakan rasio antara variansi berbobot rerata-rerata tersebut dan besarnya variabilitas antarrerata tersebut yang diharapkan ketika hipotesis nolnya diasumsikan benar. Pada umumnya nilai statistik ini dihitung secara langsung dengan menggunakan komputer. Akan tetapi, jika Anda tertarik untuk mengetahui bagaimana cara menghitung statistik tersebut, silakan baca kolom berikut. Penjelasan lebih detail lagi tentang statistik $F$ dapat ditemukan di Kristanto [-@Kristanto2021b, pp. 58-66].
+-   Kita tidak menolak hipotesis nol dan menganggap bahwa pemerolehan sampel yang sangat langka tersebut merupakan kebetulan belaka.
+
+-   Kita tolak hipotesis nol sehingga kita simpulkan bahwa paling tidak ada satu kategori buku yang rerata harga bukunya berbeda dengan yang lain dalam populasinya.
+
+Karena peluangnya sangat kecil, kita pilih kesimpulan kedua yang lebih masuk akal. Jadi, `sampel_buku` tersebut menjadi bukti yang cukup untuk mendukung dugaan awal saya, yaitu bahwa terdapat perbedaan rerata `harga` buku di `kategori` hukum, ilmu kesehatan, dan teknologi.
+
+# Distribusi $F$ {#sec-dist-f}
+
+Pada bagian sebelumnya kita telah mengenal statistik $F$. Statistik ini digunakan untuk melihat seberapa beragam rerata-rerata dalam sampelnya. Statistik ini merupakan rasio antara variansi berbobot rerata-rerata tersebut dan besarnya variabilitas antarrerata tersebut yang diharapkan ketika hipotesis nolnya diasumsikan benar. Dengan alasan inilah kenapa uji hipotesis yang kita lakukan ini disebut dengan analisis variansi atau *analysis of variance* (ANOVA).
+
+Pada umumnya nilai statistik ini dihitung secara langsung dengan menggunakan komputer. Akan tetapi, jika Anda tertarik untuk mengetahui bagaimana cara menghitung statistik tersebut, silakan baca kolom berikut. Penjelasan lebih detail lagi tentang statistik $F$ dapat ditemukan di Kristanto [-@Kristanto2021b, pp. 58-66].
 
 ::: {#hitung-stat-f style="padding: 10px 15px; border: 1px solid;"}
-### Bagaimana Menghitung $F$? {.unnumbered .unlisted}
+### Bagaimana Menghitung $F$? {#sec-hitung-stat-f .unnumbered .unlisted}
 
 Variansi berbobot rerata-rerata dalam sampel dihitung dengan menggunakan kuadrat rerata faktor atau $MSTR$. Nilai $MSTR$ tersebut memiliki derajat bebas $\text{df}_{\text{TR}} = k - 1$. @eq-mstr berikut digunakan untuk menghitung $MSTR$.
 
@@ -324,7 +338,7 @@ sstr_buku
 mstr_buku
 ```
 
-Dengan demikian, kita peroleh $SSTR \approx \text{564005,9}$ dan $MSTR \approx 282003$. Berikutnya kita tentukan $MSE$.
+Dengan demikian, kita peroleh $SSTR \approx \text{564005,9}$ dan $MSTR \approx 282003$. Berikutnya kita tentukan $MSE$ dengan bantuan @tbl-menuju-sse berikut.
 
 ```{r}
 #| label: tbl-menuju-sse
@@ -349,7 +363,7 @@ sampel_buku_b2 %>%
                 full_width = FALSE)
 ```
 
-$SSE$ dihitung dengan menjumlahkan semua sel dalam kolom keempat atau $\left(n_i-1\right) s_i^2$ sehingga nilai $MSE$ dapat diperoleh dengan membagi $SSE$ tersebut dengan $\text{df}_{\text{E}} = 30 - 3 = 27$.
+$SSE$ dihitung dengan menjumlahkan semua sel dalam kolom keempat atau $\left(n_i-1\right) s_i^2$ pada @tbl-menuju-sse. Nilai $MSE$ dapat diperoleh dengan membagi $SSE$ tersebut dengan $\text{df}_{\text{E}} = 30 - 3 = 27$.
 
 ```{r}
 #| code-fold: false
@@ -373,6 +387,189 @@ F_buku
 
 Nilai $F\approx\text{9,645871}$ tersebut sama dengan yang kita peroleh pada bagian sebelumnya.
 :::
+
+Ketika statistik $F$ dari semua kemungkinan sampel yang berukuran $n$ dan memiliki $k$ kelompok dihimpun jadi satu, kita mendapatkan distribusi sampling statistik $F$. Jika hipotesis nol diasumsikan benar dan sampel yang kita miliki memenuhi kondisi-kondisi tertentu, maka distribusi sampling tersebut bentuknya mengikuti distribusi $F$. Distribusi $F$ ini memiliki dua parameter, yaitu $\text{df}_1 = k - 1$ dan $\text{df}_2 = n - k$.
+
+Misalnya, jika kita memiliki sampel yang berukuran $n = 30$ dan sampel tersebut memuat $k = 3$ kelompok (seperti `sampel_buku` yang kita gunakan sebelumnya), maka distribusi $F$-nya memiliki bentuk seperti yang ditunjukkan pada @fig-dist-F-2-27 berikut.
+
+```{r}
+#| label: fig-dist-F-2-27
+#| fig-cap: Distribusi $F$ dengan $\text{df}_1 = 2$ dan $\text{df}_2 = 27$.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(0, 10)),
+       aes(x = x)) +
+  geom_function(fun = df,
+                args = list(df1 = 2, df2 = 27),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "F")
+```
+
+Untuk menggunakan distribusi $F$ dalam melakukan uji ANOVA, terdapat tiga kondisi yang perlu terpenuhi. Ketiga kondisi tersebut dipaparkan sebagai berikut.
+
+-   **Bebas.** Kondisi pertama adalah setiap observasi dalam sampelnya harus bebas. Jika sampelnya merupakan sampel acak sederhana, seperti `sampel_buku` yang kita gunakan sebelumnya, kondisi ini otomatis terpenuhi. Jika datanya merupakan hasil eksperimen atau pengamatan, perlu dipastikan secara hati-hati bahwa datanya bebas.
+
+-   **Normalitas.** Kondisi kedua adalah bahwa setiap kelompok dalam sampelnya berasal dari populasi yang berdistribusi normal. Hal ini dapat diperiksa dengan menggunakan metode visual (yaitu dengan diagram peluang normal) atau uji normalitas.
+
+-   **Homogenitas variansi.** Kondisi ketiga adalah bahwa setiap kelompoknya berasal populasi yang memiliki variansi sama. Kondisi ini juga dapat diperiksa dengan menggunakan cara visual atau uji homogenitas variansi. Dengan cara visual, kita dapat menggunakan boxplot yang berdampingan untuk melihat apakah ada perbedaan sebaran yang signifikan. Uji homogenitas variansi yang dapat kita gunakan misalnya adalah uji Levene.
+
+# Uji ANOVA
+
+Sekarang kita akan menguji dugaan awal saya dengan menggunakan uji ANOVA. Untuk melakukannya, kita perlu memeriksa apakah tiga kondisinya terpenuhi.
+
+## Pemeriksaan Kondisi
+
+Seperti yang dijelaskan di awal, data `sampel_buku` merupakan sampel acak sederhana. Dengan demikian, kondisi `bebas` terpenuhi. Berikutnya kita uji normalitas data tersebut untuk setiap `kategori`-nya. Untuk melakukannya, kita dapat menggunakan diagram peluang normal seperti yang ditunjukkan pada @fig-QQ-kategori-buku.
+
+```{r}
+#| label: fig-QQ-kategori-buku
+#| fig-cap: Diagram peluang normal `harga` buku di setiap `kategori`-nya dalam data `sampe_buku`.
+#| fig-asp: 0.5625
+
+sampel_buku %>%
+  ggqqplot(x = "harga",
+           color = "kategori",
+           ggtheme = theme_bw(),
+           xlab = "Teoretis",
+           ylab = "Sampel")
+```
+
+Berdasarkan @fig-QQ-kategori-buku tersebut, kita dapat mengasumsikan bahwa data `harga` buku di setiap `kategori`-nya berasal dari populasi yang berdistribusi normal. Kesimpulan ini dapat didukung oleh hasil uji Shapiro-Wilk seperti yang ditunjukkan pada @tbl-hasil-Shapiro-Wilk-harga-buku.
+
+```{r}
+#| label: tbl-hasil-Shapiro-Wilk-harga-buku
+#| tbl-cap: Hasil uji normalitas Shapiro-Wilk terhadap `harga` setiap `kategori`-nya.
+
+sampel_buku %>% 
+  group_by(kategori) %>% 
+  summarise(W = shapiro.test(harga)$statistic,
+            p = shapiro.test(harga)$p.value) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "hold_position"),
+                full_width = FALSE)
+```
+
+Hasil uji normalitas yang disajikan pada @tbl-hasil-Shapiro-Wilk-harga-buku menghasilkan nilai-P yang cukup besar. Dengan demikian, hasil uji Shapiro-Wilk tersebut tidak menolak asumsi kita bahwa populasinya berdistribusi normal.
+
+Untuk memeriksa tentang homogenitas variansi, kita gunakan boxplot dari `harga` untuk setiap `kategori`-nya. Perhatikan @fig-boxplot-harga-kategori-buku.
+
+```{r}
+#| label: fig-boxplot-harga-kategori-buku
+#| fig-cap: Distribusi `harga` untuk setiap `kategori` dalam `sampel_buku`.
+#| fig-asp: 0.5625
+
+sampel_buku %>% 
+  ggplot(aes(x = kategori, y = harga)) +
+  geom_boxplot(aes(color = kategori)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+Berdasarkan @fig-boxplot-harga-kategori-buku, kita dapat melihat bahwa penyebaran data `harga` di setiap `kategori`-nya tidak terlalu berbeda. Untuk itu kita dapat mengasumsikan bahwa variansi `harga` antar-`kategori`-nya sama.
+
+Kita dapat menguji asumsi tentang homogenitas variansi tersebut dengan menggunakan uji Levene. Hipotesis nol uji ini adalah variansi semua populasinya sama. Hipotesis alternatifnya menyatakan bahwa paling tidak ada satu pasang populasi yang variansinya berbeda.
+
+Untuk melakukannya, kita dapat menggunakan perintah `leveneTest()` yang merupakan salah satu fungsi dari paket {car}.
+
+```{r}
+#| code-fold: false
+
+leveneTest(harga ~ kategori, sampel_buku)
+```
+
+Karena kita mendapatkan nilai-*P* yang besar, yaitu 0,9524, maka kita gagal menolak hipotesis nol. Dengan demikian, sejalan dengan pengamatan kita terhadap @fig-boxplot-harga-kategori-buku, kita asumsikan `harga` di setiap `kategori` bukunya memiliki variansi yang sama.
+
+## Hipotesis Nol dan Alternatifnya
+
+Dugaan awal saya adalah paling tidak terdapat satu pasang kategori yang rerata harga bukunya berbeda. Untuk menguji ini, hipotesis nol dan alternatifnya adalah sebagai berikut.
+
+-   $H_0$: Rerata `harga` di setiap `kategori` bukunya sama. Hal ini dinotasikan sebagai $\mu_1 = \mu_2 = \mu_3$ dengan $\mu_1$, $\mu_2$, dan $\mu_3$ secara berturut-turut adalah rerata harga semua buku di dalam kategori Hukum, Ilmu Kesehatan, dan Teknologi.
+
+-   $H_A$: Paling tidak terdapat satu pasang rerata yang berbeda.
+
+## Tingkat Signifikansi
+
+Untuk melakukan uji ANOVA ini, kita gunakan tingkat signifikansi $\alpha = \text{0,05}$.
+
+## Variabilitas Statistik
+
+Data sampel yang kita miliki telah memenuhi tiga kondisi penggunaan distribusi $F$. Dengan demikian kita dapat memodelkan variabilitas statistiknya dengan distribusi tersebut.
+
+Sampel yang kita miliki, yaitu `sampel_buku`, berukuran $n = 30$ dan memiliki $k = 3$ kategori, maka distribusi $F$ yang kita gunakan memiliki $\text{df}_1 = 3 - 1 = 2$ dan $\text{df}_2 = 30 - 3 = 27$. Distribusinya ditunjukkan pada @fig-dist-F-2-27.
+
+## Statistik Uji dan Nilai-P
+
+Pada @sec-dist-f kita telah menghitung statistik $F$ dan didapatkan nilainya kurang lebih `r round(F_buku, 3)`. Berdasarkan statistik uji ini, kita dapat menghitung nilai-P dengan menggunakan kode berikut.
+
+```{r}
+#| code-fold: false
+
+P_buku <- pf(F_buku, df1 = 2, df2 = 27, lower.tail = FALSE)
+P_buku
+
+```
+
+Berdasarkan perhitungan itu kita peroleh nilai-*P* yang kurang lebih `r round(P_buku, 5)`.
+
+Statistik uji $F$ dan nilai-*P* yang bersesuaian tersebut juga dapat dihitung dengan menggunakan fungsi `aov()` seperti berikut.
+
+```{r}
+#| code-fold: false
+
+ANOVA_buku <- aov(harga ~ kategori, data = sampel_buku)
+summary(ANOVA_buku)
+```
+
+## Kesimpulan dan Interpretasi {#sec-kesimpulan-anova}
+
+Karena kita mendapatkan nilai-P yang kurang dari tingkat signifikansinya, kita tolak hipotesis nolnya. Jadi, terdapat cukup bukti untuk mendukung dugaan saya bahwa paling tidak terdapat satu pasang kategori yang rerata harga bukunya berbeda.
+
+# Uji Hipotesis Pasca-ANOVA
+
+Di akhir uji ANOVA pada @sec-kesimpulan-anova, kita menyimpulkan bahwa paling tidak ada sepasang rerata yang berbeda. Akan tetapi, kita tidak mengetahui rerata harga buku dari kategori mana saja yang berbeda. Untuk itu, kita perlu melakukan uji hipotesis pasca-ANOVA untuk mengetahuinya.
+
+Salah satu uji hipotesis pasca-ANOVA yang umum digunakan adalah uji perbandingan berganda Tukey. Uji ini membandingkan setiap pasangan yang mungkin dari reratanya [selengkapnya baca @Kristanto2021b, pp. 72-80]. Kode berikut dapat digunakan untuk membandingkan rerata `harga` buku untuk setiap `kategori`-nya.
+
+```{r}
+#| code-fold: false
+
+TukeyHSD(ANOVA_buku)
+
+```
+
+Berdasarkan uji perbandingan berganda Tukey tersebut, kita dapat menyimpulkan bahwa perbedaan rerata `harga` buku yang signifikan terjadi pada pasangan `kategori` Ilmu Kesehatan dan Hukum serta pasangan Teknologi dan Hukum. Untuk pasangan Teknologi dan Kesehatan, perbedaan reratanya tidak signifikan.
+
+# Uji Nonparametrik Alternatif
+
+Uji ANOVA memiliki alternatif, yaitu uji Kruskal-Wallis. Berbeda dengan ANOVA, uji Kruskal-Wallis tidak mempersyaratkan normalitas dan homogenitas variansinya. Uji Kruskal-Wallis ini hanya mempersyaratkan bahwa observasi-observasi dalam sampelnya bebas [selengkapnya baca @Kristanto2021b, pp. 241-248].
+
+Untuk uji Kruskal-Wallis, hipotesis nolnya adalah bahwa median (nilai tengah) populasi-populasinya sama. Dengan menggunakan data `sampel_buku`, kita dapat melakukan uji ini seperti berikut.
+
+```{r}
+#| code-fold: false
+
+kruskal.test(harga ~ kategori, data = sampel_buku)
+
+```
+
+Berdasarkan hasil tersebut, kita mendapatkan nilai-*P* yang sangat kecil, yaitu sekitar 0,0023. Kita tolak hipotesis nol bahwa median `harga` buku di setiap `kategori`-nya sama. Dengan demikian, minimal ada satu pasang `kategori` buku yang median `harga`-nya berbeda.
+
+# Catatan Penutup
+
+Melalui artikel ini kita telah mempelajari bagaimana menggunakan uji ANOVA untuk menguji apakah terdapat perbedaan rerata dari banyak kelompok. Untuk menggunakan uji ini, kita perlu memeriksa apakah kondisi-kondisinya terpenuhi. Kondisi-kondisi tersebut adalah bahwa observasi-observasi dalam sampelnya bebas, setiap kelompok dalam sampel berasal dari populasi yang berdistribusi normal, dan setiap kelompok tersebut juga memiliki variansi yang sama.
+
+Uji ANOVA tidak dapat mendeteksi pasangan rerata mana saja yang berbeda. Untuk mengetahuinya, kita perlu melakukan uji perbandingan berganda. Artikel ini juga telah membahas salah satu uji perbandingan berganda, yaitu uji perbandingan berganda Tukey. Dengan uji ini, kita mengetahui pasangan rerata yang berbeda.
+
+Terakhir, kita juga telah mempelajari uji hipotesis alternatif dari uji ANOVA, yaitu uji Kruskal-Wallis. Uji nonparametrik ini tidak memperlukan dua kondisi yang dipersyaratkan oleh ANOVA, yaitu tentang normalitas dan homogenitas variansi.
 
 # Daftar Rujukan
 

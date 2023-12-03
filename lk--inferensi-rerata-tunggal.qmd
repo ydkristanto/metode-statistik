@@ -10,7 +10,7 @@ author:
     affiliation-url: https://www.usd.ac.id/
 language: _language-id.yml
 type: webpage
-container-title: "Metode Statistik"
+container-title: "Catatan Kuliah STAT503 Metode Statistik"
 format:
   html:
     toc: true
@@ -159,7 +159,7 @@ Berdasarkan @fig-diagram-QQ-tkda dan dengan selang kepercayaan 0,95, semua titik
 Selain dengan menggunakan diagram peluang normal, kita dapat menggunakan uji normalitas. Salah satunya adalah uji Shapiro-Wilk. Di uji ini, hipotesis nolnya adalah bahwa sampelnya berasal dari populasi yang berdistribusi normal sedangkan hipotesis alternatifnya adalah bahwa sampelnya tidak berasal dari populasi yang berdistribusi normal.
 
 ```{r}
-#| label: uji-normalitas-Kolmogorov-Smirnov
+#| label: uji-normalitas-Shapiro-Wilk
 #| code-fold: false
 
 uji_sw_tkda <- shapiro.test(sampel_tkda$skor_akhir)
