@@ -55,7 +55,7 @@ Berdasarkan pengamatan awal, saya menduga bahwa terdapat perbedaan rerata harga 
 
 # Data dan Konteksnya
 
-Untuk menguji dugaan saya sebelumnya, saya memutuskan untuk memilih 10 buku secara acak untuk setiap kategori bukunya dari Amazon.com dan mencatat harga buku-buku tersebut. Data ini selanjutnya dinamai `sampel_buku` dan statistik deskriptif `harga` bukunya untuk setiap `kategori`-nya disajikan pada [@tbl-sampel-harga-buku; bandingkan dengan @Kristanto2021b, p. 95]
+Untuk menguji dugaan saya sebelumnya, saya memutuskan untuk memilih 10 buku secara acak untuk setiap kategori bukunya dari Amazon.com dan mencatat harga buku-buku tersebut. Data ini selanjutnya dinamai `sampel_buku` dan statistik deskriptif `harga` bukunya untuk setiap `kategori`-nya disajikan pada [@tbl-sampel-harga-buku; bandingkan dengan @Kristanto2021b, p. 95].
 
 ```{r}
 #| label: tbl-sampel-harga-buku
@@ -254,7 +254,7 @@ dist_samp_sim_buku %>%
   nrow()
 ```
 
-Ternyata ada 10 dari 10.000 sampel hasil simulasi yang statistik $F$-nya lebih dari atau sama dengan statistik $F$ `sampel_buku`. Artinya, dengan mengasumsikan bahwa rerata harga bukunya sama di setiap kategorinya, kita mendapatkan bahwa peluang untuk mendapatkan sampel yang perbedaan rerata `harga` buku di setiap `kategori`-nya seekstrem atau lebih ekstrem dari `sampel_buku` yang kita miliki sangatlah kecil, yaitu sekitar 0,01!
+Ternyata ada 10 dari 10.000 sampel hasil simulasi yang statistik $F$-nya lebih dari atau sama dengan statistik $F$ `sampel_buku`. Artinya, dengan mengasumsikan bahwa rerata harga bukunya sama di setiap kategorinya, kita mendapatkan bahwa peluang untuk mendapatkan sampel yang perbedaan rerata `harga` buku di setiap `kategori`-nya seekstrem atau lebih ekstrem dari `sampel_buku` yang kita miliki sangatlah kecil, yaitu sekitar 0,001!
 
 Terkait dengan hasil tersebut, kita memiliki dua pilihan kesimpulan sebagai berikut.
 
@@ -528,7 +528,7 @@ Sampel yang kita miliki, yaitu `sampel_buku`, berukuran $n = 30$ dan memiliki $k
 
 ```{r}
 #| label: fig-dist-F-2-27
-#| fig-cap: Distribusi $F$ dengan $\text{df}_1 = 2$ dan $\text{df}_2 = 27.
+#| fig-cap: Distribusi $F$ dengan $\text{df}_1 = 2$ dan $\text{df}_2 = 27$.
 #| fig-asp: 0.5625
 
 data.frame(x = c(0, 12)) %>% 

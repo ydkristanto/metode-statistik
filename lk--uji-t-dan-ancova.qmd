@@ -1,0 +1,63 @@
+---
+title: "Analisis Data Hasil Eksperimen Semu"
+subtitle: "Melakukan Uji Hipotesis dengan Uji $t$ dan ANCOVA"
+abstract: |
+date: 2023/12/06
+author:
+  - name: Yosep Dwi Kristanto
+    url: https://people.usd.ac.id/~ydkristanto/
+    affiliation: Pendidikan Matematika, Universitas Sanata Dharma, Yogyakarta
+    affiliation-url: https://www.usd.ac.id/
+language: _language-id.yml
+type: webpage
+container-title: "Catatan Kuliah STAT503 Metode Statistik"
+format:
+  html:
+    toc: true
+    number-sections: true
+    keywords: "normalitas, Shapiro-Wilk, homogenitas variansi, Levene, uji hipotesis, ANOVA, distribusi F, Kruskal-Wallis, Tukey, Dunn, R"
+    page-layout: article
+    code-fold: true
+    code-tools: true
+    code-line-numbers: true
+    anchor-sections: true
+    smooth-scroll: true
+execute: 
+  echo: true
+  warning: false
+  freeze: auto
+bibliography: references.bib
+csl: apa.csl
+google-scholar: true
+---
+
+```{r}
+#| label: pengaturan
+
+library(tidyverse)
+library(rstatix)
+
+```
+
+# Pendahuluan
+
+```{r}
+
+set.seed(503)
+sampel_eks <- data.frame(
+  kelompok = c(rep("eksperimen", 30),
+               rep("kontrol", 33)),
+  pre = c(round(rnorm(30, 53, 10), 0), round(rnorm(33, 55, 10), 0))
+)
+
+sampel_eks <- sampel_eks %>% 
+  mutate(
+    gal = c(rnorm(30, 0, 3), rnorm(33, 0, 5)),
+    post = if_else(kelompok == "eksperimen",
+                   round(1.2*pre + 5 + gal, 0),
+                   round(1.2*pre + gal, 0))) %>% 
+  mutate(
+    post = if_else(post > 100, 100, post)
+  ) %>% 
+  select(kelompok, pre, post)
+```
