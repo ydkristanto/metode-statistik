@@ -2,7 +2,8 @@
 title: "Analisis Data Hasil Eksperimen Semu"
 subtitle: "Melakukan Uji Hipotesis dengan Uji $t$ dan ANCOVA"
 abstract: |
-date: 2023/12/06
+  Eksperimen semu atau eksperimen kuasi merupakan salah satu metode penelitian yang sering digunakan untuk mengetahui apakah terdapat pengaruh variabel-variabel bebas terhadap variabel terikat. Artikel ini memberikan pemaparan tentang dua metode statistik yang digunakan untuk menganalisis data hasil eksperimen semu tersebut. Metode statistik tersebut adalah uji $t$ dan uji ANCOVA (*analysis of covariance*). Kedua metode statistik tersebut didemonstrasikan secara cukup detail dengan menggunakan R untuk menyelesaikan permasalahan statistik dengan konteks pendidikan.
+date: 2023/12/04
 author:
   - name: Yosep Dwi Kristanto
     url: https://people.usd.ac.id/~ydkristanto/
@@ -15,7 +16,7 @@ format:
   html:
     toc: true
     number-sections: true
-    keywords: "normalitas, Shapiro-Wilk, homogenitas variansi, Levene, uji hipotesis, ANOVA, distribusi F, Kruskal-Wallis, Tukey, Dunn, R"
+    keywords: "eksperimen, eksperimen semu, eksperimen kuasi, pemodelan, normalitas, Shapiro-Wilk, uji t, ANCOVA, analysis of covariance, Welch, R"
     page-layout: article
     code-fold: true
     code-tools: true
@@ -48,7 +49,7 @@ library(ggpubr)
 
 [^1]: Cerita di bagian ini merupakan cerita fiktif. Cerita tersebut digunakan untuk mengilustrasikan salah satu konteks penggunaan metode eksperimen semu dalam menjawab pertanyaan tentang pengaruh satu atau lebih variabel terhadap variabel lainnya.
 
-Seorang guru ingin mengimplementasikan sebuah metode pembelajaran di kelasnya agar hasil belajar peserta didiknya di topik transformasi fungsi menjadi lebih baik. Tak hanya itu, dia juga ingin mengetahui apakah penggunaan metode pembelajaran tersebut betul-betul berpengaruh positif terhadap hasil belajar peserta didiknya[^2]. Setelah dia berdiskusi dengan rekan-rekannya dan seorang akademisi yang ahli di bidang pembelajaran matematika, dia memiliki hipotesis seperti ini.
+Seorang guru ingin mengimplementasikan sebuah metode pembelajaran di kelasnya agar hasil belajar peserta didiknya di topik transformasi fungsi menjadi lebih baik. Tak hanya itu, dia juga ingin mengetahui apakah penggunaan metode pembelajaran tersebut betul-betul berpengaruh positif terhadap hasil belajar peserta didiknya.[^2] Setelah dia berdiskusi dengan rekan-rekannya dan seorang akademisi yang ahli di bidang pembelajaran matematika, dia memiliki hipotesis seperti ini.
 
 [^2]: Pengaruh positif di sini berarti penggunaan metode pembelajaran tersebut membuat hasil belajar anak didik guru tersebut menjadi lebih tinggi dibandingkan ketika tidak digunakannya metode itu.
 
@@ -58,7 +59,7 @@ Setelah berhipotesis demikian, guru tersebut merencanakan sebuah eksperimen semu
 
 # Data dan Konteksnya
 
-Sebelum dan setelah dilaksanakan pembelajaran, baik peserta didik di kelas kontrol maupun kelas eksperimen diminta untuk mengerjakan tes awal dan tes akhir. Dengan demikian, setelah eksperimen selesai dilakukan, guru tersebut memperoleh tiga variabel utama, yaitu `kelompok`, `tes_awal`, dan `tes_akhir`. Selain itu, dia juga memiliki variabel `id` sebagai identifikasi tiap-tiap peserta didiknya. Rekap datanya dia simpan dan dia namai sebagai `sampel_prepost`[^3]. Data guru tersebut ditunjukkan seperti berikut.
+Sebelum dan setelah dilaksanakan pembelajaran, baik peserta didik di kelas kontrol maupun kelas eksperimen diminta untuk mengerjakan tes awal dan tes akhir. Dengan demikian, setelah eksperimen selesai dilakukan, guru tersebut memperoleh tiga variabel utama, yaitu `kelompok`, `tes_awal`, dan `tes_akhir`. Selain itu, dia juga memiliki variabel `id` sebagai identifikasi tiap-tiap peserta didiknya. Rekap datanya dia simpan dan dia namai sebagai `sampel_prepost`.[^3] Data guru tersebut ditunjukkan seperti berikut.
 
 [^3]: Data sampel ini bukan merupakan data riil. Akan tetapi, data tersebut merupakan data yang dibuat oleh pengarang. Hal ini ditujukan untuk mempermudah dan memperjelas penggunaan metode statistik yang akan dipaparkan pada bagian berikutnya.
 
@@ -249,9 +250,11 @@ Berdasarkan @tbl-stat-deskriptif-d-prepost tersebut, apakah kita dapat menyimpul
 
 Tunggu dulu. Secara rata-rata dalam data sampelnya, kita memang melihat bahwa peningkatan skor di `kelompok` eksperimen lebih tinggi dibandingkan `kelompok` kontrol. Akan tetapi, hal ini bisa terjadi karena kebetulan. Untuk itu, kita perlu menggunakan metode statistika inferensial yang membandingkan rerata sampel-sampel yang tidak berpasangan, yaitu uji $t$.
 
-# Uji Hipotesis dengan Uji $t$
+# Uji Hipotesis dengan Uji $t$ {#sec-uji-t-prepost}
 
-Untuk menggunakan uji $t$, ada dua kondisi yang perlu terpenuhi. Pertama, setiap observasi dalam tiap-tiap kelompoknya harus bebas. Kedua adalah kondisi normalitas. Kondisi ini terpenuhi ketika (a) sampel-sampelnya kecil tapi berasal dari populasi yang berdistribusi normal; atau (b) sampel-sampelnya besar. Terkait kondisi pertama, kita anggap bahwa setiap peserta didik dalam `sampel_prepost` bebas, baik dalam `kelompok` eksperimen maupun kontrol.
+Untuk menggunakan uji $t$, ada dua kondisi yang perlu terpenuhi.[^4] Pertama, setiap observasi dalam tiap-tiap kelompoknya harus bebas. Kedua adalah kondisi normalitas. Kondisi ini terpenuhi ketika (a) sampel-sampelnya kecil tapi berasal dari populasi yang berdistribusi normal; atau (b) sampel-sampelnya besar. Terkait kondisi pertama, kita anggap bahwa setiap peserta didik dalam `sampel_prepost` bebas, baik dalam `kelompok` eksperimen maupun kontrol.
+
+[^4]: Jika kondisi-kondisinya terpenuhi, uji $t$ yang akan kita gunakan adalah uji $t$ dengan perkiraan derajat bebas Welch. Uji $t$ ini tidak mengasumsikan kesamaan variansi atau homogenitas variansi. Jika pembaca ingin mengetahui beberaja jenis uji $t$, silakan baca Kristanto [-@Kristanto2021b, pp. 17-25].
 
 Ukuran sampel dalam setiap `kelompok` juga cukup besar, yaitu 32 untuk eksperimen dan 34 untuk kontrol. Dengan demikian, sampel ini memenuhi kondisi kedua. Meskipun demikian, kita juga dapat memeriksa apakah variabel `d` pada setiap `kelompok` berasal dari populasi yang berdistribusi normal. Kita dapat menggunakan uji Shapiro-Wilk yang hasilnya disajikan pada @tbl-shapiro-prepost.
 
@@ -273,9 +276,15 @@ sampel_prepost %>%
 
 ```
 
-Berdasarkan @tbl-shapiro-prepost tersebut, kita mendapatkan nilai-P yang cukup besar. Dengan demikian, kita gagal menolak asumsi bahwa sampel dalam `kelompok` eksperimen dan kontrol berasal dari populasi yang berdistribusi normal.
+Berdasarkan @tbl-shapiro-prepost tersebut, kita mendapatkan nilai-*P* yang cukup besar. Dengan demikian, kita gagal menolak asumsi bahwa sampel dalam `kelompok` eksperimen dan kontrol berasal dari populasi yang berdistribusi normal.
 
 Karena data `sampel_prepost` memenuhi dua kondisi uji $t$, selanjutnya kita dapat melakukan uji tersebut. Kita mulai uji hipotesis tersebut dengan merumuskan hipotesis nol dan alternatifnya.
+
+::: callout-note
+### Catatan {.unnumbered .unlisted}
+
+Bagian-bagian berikutnya menjelaskan tentang tahapan-tahapan yang cukup detail tentang uji $t$. Bagi pembaca yang telah mengetahui tahapan-tahapan tersebut dan ingin langsung mengetahui perhitungan utamanya (khususnya tentang kode R yang digunakan), silakan langsung baca pada @sec-rangkuman-uji-t-prepost.
+:::
 
 ## Hipotesis Nol dan Alternatifnya
 
@@ -289,9 +298,73 @@ Hipotesis awal guru tersebut menyatakan bahwa metode pembelajaran yang digunakan
 
 Kita gunakan tingkat signifikansi $\alpha = \text{0,05}$.
 
-## Variabilitas Statistik
+## Variabilitas Statistik {#sec-var-stat-prepost}
 
-Statistik sampel yang kita gunakan dalam uji hipotesis ini adalah statistik $t$. Statistik $t$ untuk `sampel_prepost` nilainya kurang lebih seperti berikut.
+Statistik sampel yang kita gunakan dalam uji hipotesis ini adalah statistik $t$. Nilai tersebut dihitung dengan menggunakan @eq-stat-t-prepost dan mengasumsikan bahwa hipotesis nol benar, yaitu $\mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} = 0$.
+
+$$
+t = \frac{\left( \bar{x}_{d_\text{eks}} - \bar{x}_{d_\text{ktrl}} \right) - \left( \mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} \right)}{\sqrt{\frac{s_{d_\text{eks}}^2}{n_{d_\text{eks}}} + \frac{s_{d_\text{ktrl}}^2}{n_{d_\text{ktrl}}}}}
+$$ {#eq-stat-t-prepost}
+
+Distribusi statistik $t$ dari semua kemungkinan sampelnya mengikuti bentuk distribusi $t$ dengan derajat bebas nilainya kurang lebih seperti berikut.
+
+```{r}
+#| label: df-t-prepost
+
+var_eks_prepost <- sampel_prepost %>% 
+  filter(kelompok == "eksperimen") %>% 
+  summarise(Var = var(d))
+var_ktrl_prepost <- sampel_prepost %>% 
+  filter(kelompok == "kontrol") %>% 
+  summarise(Var = var(d))
+var_eks_prepost <- var_eks_prepost[1,1]
+var_ktrl_prepost <- var_ktrl_prepost[1,1]
+
+n_eks_prepost <- sampel_prepost %>% 
+  filter(kelompok == "eksperimen") %>% 
+  nrow()
+n_ktrl_prepost <- sampel_prepost %>% 
+  filter(kelompok == "kontrol") %>% 
+  nrow()
+
+A_prepost <- var_eks_prepost / n_eks_prepost
+B_prepost <- var_ktrl_prepost / n_ktrl_prepost
+
+df_prepost <- (A_prepost + B_prepost)^2 / (A_prepost^2 / (n_eks_prepost - 1) + B_prepost^2 / (n_ktrl_prepost - 1))
+
+print(df_prepost)
+
+```
+
+Penentuan derajat bebas tersebut menggunakan rumus perkiraan derajat bebas Welch seperti berikut.
+
+$$
+\text{df} = \frac{\left(A + B\right)^2}{\frac{A^2}{n_{d_\text{eks}}-1} + \frac{B^2}{n_{d_\text{ktrl}}-1}}
+$$
+
+dengan $A=\frac{s_{d_\text{eks}}^2}{n_{d_\text{eks}}}$ dan $B=\frac{s_{d_\text{ktrl}}^2}{n_{d_\text{ktrl}}}$. Dengan informasi seperti ini, distribusi $t$ yang digunakan memiliki bentuk seperti pada @fig-dist-t-prepost.
+
+```{r}
+#| label: fig-dist-t-prepost
+#| fig-cap: Distribusi $t$ dengan derajat bebas kurang lebih 61,83 yang digunakan sebagai distribusi sampling statistik $t$ untuk membandingkan rerata `d` pada `kelompok` eksperimen dan kontrol.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(-6, 6)),
+       aes(x = x)) +
+  geom_function(fun = dt,
+                args = list(df = df_prepost),
+                linewidth = 1) +
+  theme_bw() +
+  labs(x = "t") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+
+```
+
+## Statistik Uji dan Nilai-*P*
+
+Statistik $t$ untuk `sampel_prepost` dapat kita hitung dengan menggunakan @eq-stat-t-prepost. Nilainya kurang lebih seperti berikut.
 
 ```{r}
 #| label: hitung-t-sampel-prepost
@@ -302,36 +375,46 @@ M_eks_prepost <- sampel_prepost %>%
 M_ktrl_prepost <- sampel_prepost %>% 
   filter(kelompok == "kontrol") %>% 
   summarise(M = mean(d))
-var_eks_prepost <- sampel_prepost %>% 
-  filter(kelompok == "eksperimen") %>% 
-  summarise(Var = var(d))
-var_ktrl_prepost <- sampel_prepost %>% 
-  filter(kelompok == "kontrol") %>% 
-  summarise(Var = var(d))
-n_eks_prepost <- sampel_prepost %>% 
-  filter(kelompok == "eksperimen") %>% 
-  nrow()
-n_ktrl_prepost <- sampel_prepost %>% 
-  filter(kelompok == "kontrol") %>% 
-  nrow()
 
 M_eks_prepost <- M_eks_prepost[1,1]
 M_ktrl_prepost <- M_ktrl_prepost[1,1]
-var_eks_prepost <- var_eks_prepost[1,1]
-var_ktrl_prepost <- var_ktrl_prepost[1,1]
 
 t_prepost <- (M_eks_prepost - M_ktrl_prepost) / sqrt(var_eks_prepost / n_eks_prepost + var_ktrl_prepost / n_ktrl_prepost)
 
 print(t_prepost)
 ```
 
-Nilai tersebut dihitung dengan menggunakan rumus berikut dan mengasumsikan bahwa hipotesis nol benar, yaitu $\mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} = 0$.
+Nilai-*P* menyatakan peluang kita mendapatkan sampel-sampel yang seekstrem atau lebih ekstrem dari `sampel_prepost` ketika hipotesis nol diasumsikan benar. Dengan kata lain, nilai-*P* tersebut menyatakan peluang diperoleh statistik $t$ yang sama dengan atau lebih dari `r round(t_prepost, 3)`. Dengan demikian, nilai-*P* tersebut dapat direpresentasikan sebagai luas daerah di sebelah kanan `r round(t_prepost, 3)` dalam kurva yang ditunjukkan pada @fig-dist-t-prepost. Nilai-*P* tersebut dapat dihitung seperti berikut.
 
-$$
-t = \frac{\left( \bar{x}_{d_\text{eks}} - \bar{x}_{d_\text{ktrl}} \right) - \left( \mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} \right)}{\sqrt{\frac{s_{d_\text{eks}}^2}{n_{d_\text{eks}}} + \frac{s_{d_\text{ktrl}}^2}{n_{d_\text{ktrl}}}}} \approx \text{5,368}
-$$
+```{r}
+#| label: nilai-P-prepost
+#| code-fold: false
 
-Distribusi statistik $t$ dari semua kemungkinan sampelnya mengikuti bentuk distribusi $t$ dengan derajat bebas nilainya kurang lebih seperti berikut.
+nilai_P_prepost <- pt(t_prepost, df = df_prepost, lower.tail = FALSE)
+print(nilai_P_prepost)
+
+```
+
+## Kesimpulan dan Interpretasi
+
+Kita mendapatkan nilai-*P* yang sangat kecil sekali, yaitu `r format(nilai_P_prepost, scientific = FALSE)`. Nilai ini lebih kecil dibandingkan dengan tingkat signifikansi yang telah kita tetapkan sebelumnya, yaitu $\alpha=\text{0,05}$. Akibatnya, kita tolak hipotesis nol. Dengan demikian, terdapat cukup bukti untuk mendukung hipotesis guru tersebut yang menyatakan bahwa metode pembelajaran yang dilakukan berpengaruh positif terhadap hasil belajar peserta didik.
+
+## Rangkuman Penggunaan Uji $t$ {#sec-rangkuman-uji-t-prepost}
+
+Sebelum melakukan uji $t$ untuk membandingkan rerata selisih `tes_akhir` dan `tes_awal`, kita perlu menguji kondisi-kondisi prasyarat uji tersebut. Hal ini telah kita lakukan di bagian awal pada @sec-uji-t-prepost. Setelah itu, kita lakukan uji $t$ tersebut. Dari uji tersebut kita mendapatkan statistik uji $t$ untuk kemudian dibandingkan dengan semua kemungkinan nilai $t$ lainnya. Hal ini kita lakukan dengan menghitung nilai-*P*. Secara ringkas, uji $t$ tersebut dapat dilakukan dengan menggunakan fungsi `t_test()` seperti berikut.[^5]
+
+[^5]: Fungsi `t_test()` ini merupakan salah satu fungsi dari paket {rstatix}.
+
+```{r}
+#| label: t_test_prepost
+#| code-fold: false
+
+t_test(data = sampel_prepost,
+       formula = d ~ kelompok,
+       var.equal = FALSE,
+       alternative = "greater")
+
+```
 
 # Daftar Rujukan
 
