@@ -1,0 +1,104 @@
+---
+title: "STAT503 Metode Statistik"
+subtitle: "Ujian Akhir Semester (UAS)"
+author: ""
+format:
+  pdf:
+    number-sections: true
+    papersize: a4
+    geometry: 
+      - top = 30mm
+      - left = 30mm
+      - bottom = 30mm
+      - right = 30mm
+crossref: 
+  fig-title: Gambar
+  fig-prefix: Gambar
+  tbl-title: Tabel
+  tbl-prefix: Tabel
+  sec-prefix: Bagian
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+
+```
+
+# Motivasi Belajar
+
+Seorang guru ingin mengetahui apakah secara rata-rata motivasi belajar peserta didiknya meningkat setelah mereka mengikuti pembelajarannya. Untuk itu, guru tersebut menghitung selisih motivasi belajar setiap peserta didik dengan mengurangi motivasi awal dengan motivasi akhirnya. Statistik deskriptif selisih motivasi tersebut, yaitu `d`, disajikan pada @tbl-stat-deskriptif-selisih-motivasi.
+
+| Variabel | $n$ | $\bar{x}$ | $s$  |
+|:--------:|:---:|:---------:|:----:|
+|   `d`    | 58  |   -1,1    | 5,01 |
+
+: Statistik deskriptif selisih motivasi belajar peserta didik {#tbl-stat-deskriptif-selisih-motivasi}
+
+Berdasarkan @tbl-stat-deskriptif-selisih-motivasi, guru tersebut menduga bahwa terjadi peningkatan motivasi belajar peserta didiknya.
+
+1.  Untuk menguji klaim guru tersebut, tuliskan hipotesis nol dan alternatifnya.
+
+2.  Anggap bahwa sampel guru tersebut bebas. Karena sampelnya besar, kita langsung dapat menggunakan uji $t$. Dengan menggunakan uji ini, berapakah nilai-*P* yang didapatkan?
+
+3.  Tuliskan kesimpulan dan interpretasi uji $t$ tersebut!
+
+------------------------------------------------------------------------
+
+\[Tuliskan jawaban Anda terhadap permasalah tentang motivasi belajar tersebut di sini.\]
+
+# Tinggi Badan Pemain Sepak Bola
+
+Seorang penikmat sepak bola menduga bahwa pemain sepak bola pada posisi penyerang, gelandang, pemain belakang, dan penjaga gawang memiliki tinggi badan yang reratanya sama. (a) Ujilah dugaan tersebut dengan data `sampel_pemain_bola`. Sampel tersebut merupakan sampel acak sederhana. (b) Jika dugaan tersebut ditolak, carilah rerata mana yang berbeda.
+
+```{r}
+#| label: data-sampel-pemain-bola
+
+sampel_pemain_bola <- tribble(
+  ~posisi,	          ~tinggi_badan,
+  "Penjaga Gawang",	  188,
+  "Penjaga Gawang",	  190,
+  "Penjaga Gawang",	  190,
+  "Penjaga Gawang",	  190,
+  "Penjaga Gawang",	  185,
+  "Penjaga Gawang",	  191,
+  "Penjaga Gawang",	  188,
+  "Penjaga Gawang",	  196,
+  "Pemain Belakang",	190,
+  "Pemain Belakang",	185,
+  "Pemain Belakang",	189,
+  "Pemain Belakang",	172,
+  "Pemain Belakang",	184,
+  "Pemain Belakang",	184,
+  "Pemain Belakang",	191,
+  "Pemain Belakang",	186,
+  "Pemain Belakang",	179,
+  "Pemain Belakang",	186,
+  "Gelandang",      	183,
+  "Gelandang",	      183,
+  "Gelandang",	      173,
+  "Gelandang",	      174,
+  "Gelandang",	      174,
+  "Gelandang",	      181,
+  "Gelandang",	      181,
+  "Gelandang",	      173,
+  "Gelandang",	      186,
+  "Gelandang",	      176,
+  "Penyerang",	      187,
+  "Penyerang",	      181,
+  "Penyerang",	      181,
+  "Penyerang",	      181,
+  "Penyerang",	      189,
+  "Penyerang",	      189,
+  "Penyerang",	      181,
+  "Penyerang",	      184,
+  "Penyerang",	      172
+)
+
+```
+
+------------------------------------------------------------------------
+
+\[Tuliskan jawaban Anda terhadap permasalahan tinggi badan pemain sepak bola tersebut di sini.\]

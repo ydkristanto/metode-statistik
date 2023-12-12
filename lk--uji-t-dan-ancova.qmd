@@ -22,6 +22,7 @@ format:
     code-line-numbers: true
     anchor-sections: true
     smooth-scroll: true
+    html-math-method: mathml
 execute: 
   echo: true
   warning: false
@@ -35,29 +36,304 @@ google-scholar: true
 #| label: pengaturan
 
 library(tidyverse)
+library(DT)
+library(knitr)
+library(kableExtra)
 library(rstatix)
+library(ggpubr)
 
 ```
 
-# Pendahuluan
+# Cerita Awal[^1]
+
+[^1]: Cerita di bagian ini merupakan cerita fiktif. Cerita tersebut digunakan untuk mengilustrasikan salah satu konteks penggunaan metode eksperimen semu dalam menjawab pertanyaan tentang pengaruh satu atau lebih variabel terhadap variabel lainnya.
+
+Seorang guru ingin mengimplementasikan sebuah metode pembelajaran di kelasnya agar hasil belajar peserta didiknya di topik transformasi fungsi menjadi lebih baik. Tak hanya itu, dia juga ingin mengetahui apakah penggunaan metode pembelajaran tersebut betul-betul berpengaruh positif terhadap hasil belajar peserta didiknya[^2]. Setelah dia berdiskusi dengan rekan-rekannya dan seorang akademisi yang ahli di bidang pembelajaran matematika, dia memiliki hipotesis seperti ini.
+
+[^2]: Pengaruh positif di sini berarti penggunaan metode pembelajaran tersebut membuat hasil belajar anak didik guru tersebut menjadi lebih tinggi dibandingkan ketika tidak digunakannya metode itu.
+
+> Metode pembelajaran tersebut berpengaruh positif terhadap hasil belajar peserta didik.
+
+Setelah berhipotesis demikian, guru tersebut merencanakan sebuah eksperimen semu secara cermat [ulasan metode ini dapat dibaca di @gopalan2020]. Dia memilih satu kelas kontrol dan satu kelas eksperimen.
+
+# Data dan Konteksnya
+
+Sebelum dan setelah dilaksanakan pembelajaran, baik peserta didik di kelas kontrol maupun kelas eksperimen diminta untuk mengerjakan tes awal dan tes akhir. Dengan demikian, setelah eksperimen selesai dilakukan, guru tersebut memperoleh tiga variabel utama, yaitu `kelompok`, `tes_awal`, dan `tes_akhir`. Selain itu, dia juga memiliki variabel `id` sebagai identifikasi tiap-tiap peserta didiknya. Rekap datanya dia simpan dan dia namai sebagai `sampel_prepost`[^3]. Data guru tersebut ditunjukkan seperti berikut.
+
+[^3]: Data sampel ini bukan merupakan data riil. Akan tetapi, data tersebut merupakan data yang dibuat oleh pengarang. Hal ini ditujukan untuk mempermudah dan memperjelas penggunaan metode statistik yang akan dipaparkan pada bagian berikutnya.
 
 ```{r}
+#| label: sampel-prepost
 
 set.seed(503)
-sampel_eks <- data.frame(
-  kelompok = c(rep("eksperimen", 30),
-               rep("kontrol", 33)),
-  pre = c(round(rnorm(30, 53, 10), 0), round(rnorm(33, 55, 10), 0))
+n_prepost <- c(32, 34)
+sampel_prepost <- data.frame(
+  id = c(paste0("J-", 1:n_prepost[1]),
+         paste0("K-", 1:n_prepost[2])),
+  kelompok = c(rep("eksperimen", n_prepost[1]),
+               rep("kontrol", n_prepost[2])),
+  tes_awal = c(round(rnorm(n_prepost[1], 53, 10), 0),
+          round(rnorm(n_prepost[2], 55, 10), 0))
 )
 
-sampel_eks <- sampel_eks %>% 
+sampel_prepost <- sampel_prepost %>% 
   mutate(
-    gal = c(rnorm(30, 0, 3), rnorm(33, 0, 5)),
-    post = if_else(kelompok == "eksperimen",
-                   round(1.2*pre + 5 + gal, 0),
-                   round(1.2*pre + gal, 0))) %>% 
+    gal = c(rnorm(n_prepost[1], 0, 3), rnorm(n_prepost[2], 0, 5)),
+    tes_akhir = if_else(kelompok == "eksperimen",
+                   round(1.2*tes_awal + 5 + gal, 0),
+                   round(1.2*tes_awal + gal, 0))) %>% 
   mutate(
-    post = if_else(post > 100, 100, post)
+    tes_akhir = if_else(tes_akhir > 100, 100, tes_akhir)
   ) %>% 
-  select(kelompok, pre, post)
+  select(id, kelompok, tes_awal, tes_akhir)
+
+sampel_prepost %>%
+  datatable(extensions = c("FixedColumns", "FixedHeader"),
+            options = list(pageLength = 5,
+                           dom = "tip",
+                           scrollX = TRUE,
+                           paging = TRUE,
+                           fixedHeader = TRUE))
 ```
+
+Set data `sampel_prepost` tersebut telah disajikan secara rapi. Hal ini dikarenakan setiap variabelnya disajikan ke dalam kolom-kolomnya sendiri, setiap observasinya (dalam hal ini peserta didiknya) disajikan ke dalam baris-barisnya sendiri, dan setiap nilainya disajikan ke dalam sel-selnya sendiri. Data yang telah rapi seperti ini lebih mudah untuk dianalisis lebih lanjut dengan menggunakan perangkat-perangkat lunak statistik. Di artikel ini, kita akan menggunakan R [@RManual] untuk menganalisis data tersebut.
+
+# Perencanaan Analisis Data
+
+Tujuan analisis data kita adalah untuk menguji hipotesis guru tersebut. Untuk melakukannya, paling tidak kita dapat menggunakan dua metode statistik. Pertama, kita dapat menggunakan uji $t$ terhadap kenaikan skor setiap peserta didik. Kedua, kita dapat menggunakan *analysis of covariance* (ANCOVA) terhadap skor `tes_akhir` setiap peserta didik. Perbandingan mendetail tentang kedua metode statistik tersebut dapat ditemukan di Wright [-@wright2006].
+
+Berdasarkan hipotesis yang telah dikemukakan guru tersebut, kita dapat mengidentifikasi bahwa variabel terikatnya adalah hasil belajar dan variabel bebasnya adalah `kelompok`. Dengan uji $t$, hasil belajar tersebut dimaknai sebagai peningkatan skor tesnya, yaitu `tes_akhir` dikurangi `tes_awal` untuk setiap peserta didiknya. Dengan demikian, modelnya ditunjukkan pada @eq-t-eks-semu berikut.
+
+$$
+\text{tes_akhir}_i-\text{tes_awal}_i = \beta_0 + \beta_1 \text{kelompok}_i + e_i
+$$ {#eq-t-eks-semu}
+
+Ketika menggunakan ANCOVA, salah satu yang bisa kita lakukan adalah dengan menggunakan `skor_akhir` sebagai variabel terikatnya dan `kelompok` sebagai variabel bebasnya. Tak hanya itu, kita juga perlu menggunakan `tes_awal` sebagai kovariatnya. Di dalam ANCOVA, kovariat ini merupakan variabel bebas kontinu yang juga mempengaruhi variabel terikatnya. Model dari ANCOVA ditunjukkan pada @eq-ancova-eks-semu berikut.
+
+$$
+\text{tes_akhir}_i = \beta_0 + \beta_1 \text{kelompok}_i + \beta_2 \text{tes_awal}_i + e_i
+$$ {#eq-ancova-eks-semu}
+
+Model pada @eq-ancova-eks-semu tersebut bukan satu-satunya, banyak juga peneliti yang menggunakan selisih `tes_akhir` dan `tes_awal` sebagai variabel terikatnya. Dengan demikian, alternatif modelnya seperti yang ditunjukkan pada @eq-ancova-alt-eks-semu berikut.
+
+$$
+\text{tes_akhir}_i - \text{tes_awal}_i = \beta_0 + \beta_1 \text{kelompok}_i + \left ( \beta_2 - 1 \right ) \text{tes_awal}_i + e_i
+$$ {#eq-ancova-alt-eks-semu}
+
+Jika kondisi-kondisi untuk melakukan uji hipotesis terpenuhi, kita dapat menggunakan ketiga model tersebut untuk menguji hipotesis guru tersebut. Akan tetapi, terlebih dahulu kita eksplorasi data `sampel_prepost` yang dimiliki oleh guru tersebut.
+
+# Eksplorasi Data
+
+Pertama, kita hitung statistik deskriptif dari `tes_awal` dan `tes_akhir` untuk `kelompok` kontrol maupun eksperimen. Hasilnya disajikan pada @tbl-stat-deskriptif-sampel-prepost.
+
+```{r}
+#| label: tbl-stat-deskriptif-sampel-prepost
+#| tbl-cap: Statistik deskriptif untuk skor `tes_awal` dan `tes_akhir` pada setiap `kelompok`-nya.
+
+sampel_prepost_panjang <- sampel_prepost %>% 
+  pivot_longer(cols = c(tes_awal, tes_akhir),
+               names_to = "tes",
+               values_to = "skor")
+sampel_prepost_panjang %>% 
+  group_by(tes, kelompok) %>% 
+  summarise(n = n(),
+            M = mean(skor),
+            SD = sd(skor),
+            Min = min(skor),
+            Maks = max(skor)) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "condensed"),
+                full_width = FALSE)
+```
+
+Selain itu, kita juga dapat memvisualisasikan skor `tes_awal` dan `tes_akhir` dengan menggunakan boxplot. Salah satu bentuk visualisasinya ditunjukkan pada @fig-boxplot-tes-prepost.
+
+```{r}
+#| label: fig-boxplot-tes-prepost
+#| fig-cap: Boxplot yang menunjukkan peningkatan skor dari `tes_awal` ke `tes_akhir` pada setiap `kelompok`-nya.
+#| fig-asp: 0.5625
+
+sampel_prepost %>% 
+  ggpaired(cond1 = "tes_awal",
+           cond2 = "tes_akhir",
+           color = "condition",
+           line.color = "gray",
+           line.size = 0.3,
+           palette = "Dark2") +
+  theme_bw() +
+  theme(axis.title.x = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank()) +
+  labs(y = "Skor") +
+  facet_grid(~kelompok)
+
+```
+
+Berdasarkan @fig-boxplot-tes-prepost paling tidak kita mendapatkan dua hal. Pertama, skor `tes_akhir` pada `kelompok` eksperimen secara rata-rata lebih tinggi dibandingkan pada `kelompok` kontrol. Kedua, secara rata-rata terjadi peningkatan skor dari `tes_awal` ke `tes_akhir` di kedua `kelompok`. Akan tetapi, dari gambar tersebut kita belum mengetahui `kelompok` mana yang peningkatan skornya lebih besar.
+
+Untuk mengetahuinya, kita buat variabel baru yang nilainya diperoleh dengan mengurangi `tes_akhir` dengan `tes_awal` untuk tiap-tiap peserta didiknya. Misalkan kita namai variabel tersebut sebagai `d`.
+
+```{r}
+#| label: penambahan-d-prepost
+#| code-fold: false
+
+sampel_prepost <- sampel_prepost %>% 
+  mutate(
+    d = tes_akhir - tes_awal
+  )
+
+```
+
+Setelah kita tambahkan variabel `d`, data `sampel_prepost` sekarang menjadi seperti berikut.
+
+```{r}
+#| label: sampel-prepost-dengan-d
+
+sampel_prepost %>%
+  datatable(extensions = c("FixedColumns", "FixedHeader"),
+            options = list(pageLength = 5,
+                           dom = "tip",
+                           scrollX = TRUE,
+                           paging = TRUE,
+                           fixedHeader = TRUE))
+
+```
+
+Sekarang kita dapat membandingkan peningkatan skor tersebut antara `kelompok` eksperimen dan kontrol. Visualisasinya ditunjukkan pada @fig-boxplot-d-prepost.
+
+```{r}
+#| label: fig-boxplot-d-prepost
+#| fig-cap: Boxplot peningkatan skor pada `kelompok` eksperimen dan kontrol.
+#| fig-asp: 0.5625
+
+sampel_prepost %>% 
+  ggplot(aes(x = kelompok, y = d,
+             color = kelompok)) +
+  geom_boxplot() +
+  geom_point(position = "jitter") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+Berdasarkan @fig-boxplot-d-prepost tersebut, kita dapat melihat bahwa peningkatan skor pada `kelompok` eksperimen tampak lebih tinggi daripada `kelompok` kontrol. Hasil ini terkonfirmasi oleh statistik deskriptifnya yang disajikan pada @tbl-stat-deskriptif-d-prepost.
+
+```{r}
+#| label: tbl-stat-deskriptif-d-prepost
+#| tbl-cap: Statistik deskriptif untuk variabel `d` pada setiap `kelompok`-nya.
+
+sampel_prepost %>% 
+  group_by(kelompok) %>% 
+  summarise(n = n(),
+            M = mean(d),
+            SD = sd(d),
+            Min = min(d),
+            Maks = max(d)) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("condensed",
+                                  "striped"),
+                full_width = FALSE)
+
+```
+
+Berdasarkan @tbl-stat-deskriptif-d-prepost tersebut, apakah kita dapat menyimpulkan bahwa peningkatan skor pada `kelompok` eksperimen secara signifikan lebih tinggi dibandingkan `kelompok` kontrol?
+
+Tunggu dulu. Secara rata-rata dalam data sampelnya, kita memang melihat bahwa peningkatan skor di `kelompok` eksperimen lebih tinggi dibandingkan `kelompok` kontrol. Akan tetapi, hal ini bisa terjadi karena kebetulan. Untuk itu, kita perlu menggunakan metode statistika inferensial yang membandingkan rerata sampel-sampel yang tidak berpasangan, yaitu uji $t$.
+
+# Uji Hipotesis dengan Uji $t$
+
+Untuk menggunakan uji $t$, ada dua kondisi yang perlu terpenuhi. Pertama, setiap observasi dalam tiap-tiap kelompoknya harus bebas. Kedua adalah kondisi normalitas. Kondisi ini terpenuhi ketika (a) sampel-sampelnya kecil tapi berasal dari populasi yang berdistribusi normal; atau (b) sampel-sampelnya besar. Terkait kondisi pertama, kita anggap bahwa setiap peserta didik dalam `sampel_prepost` bebas, baik dalam `kelompok` eksperimen maupun kontrol.
+
+Ukuran sampel dalam setiap `kelompok` juga cukup besar, yaitu 32 untuk eksperimen dan 34 untuk kontrol. Dengan demikian, sampel ini memenuhi kondisi kedua. Meskipun demikian, kita juga dapat memeriksa apakah variabel `d` pada setiap `kelompok` berasal dari populasi yang berdistribusi normal. Kita dapat menggunakan uji Shapiro-Wilk yang hasilnya disajikan pada @tbl-shapiro-prepost.
+
+```{r}
+#| label: tbl-shapiro-prepost
+#| tbl-cap: Hasil uji normalitas dengan menggunakan uji Shapiro-Wilk untuk variabel `d` pada setiap `kelompok`-nya.
+
+sampel_prepost %>% 
+  group_by(kelompok) %>% 
+  shapiro_test(d) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "condensed"),
+                full_width = FALSE)
+
+```
+
+Berdasarkan @tbl-shapiro-prepost tersebut, kita mendapatkan nilai-P yang cukup besar. Dengan demikian, kita gagal menolak asumsi bahwa sampel dalam `kelompok` eksperimen dan kontrol berasal dari populasi yang berdistribusi normal.
+
+Karena data `sampel_prepost` memenuhi dua kondisi uji $t$, selanjutnya kita dapat melakukan uji tersebut. Kita mulai uji hipotesis tersebut dengan merumuskan hipotesis nol dan alternatifnya.
+
+## Hipotesis Nol dan Alternatifnya
+
+Hipotesis awal guru tersebut menyatakan bahwa metode pembelajaran yang digunakan berpengaruh positif terhadap hasil belajar peserta didik, dalam hal ini peningkatan skor dari `tes_awal` ke `tes_akhir`. Dengan demikian, hipotesis nol dan hipotesis alternatif untuk uji hipotesis yang akan kita lakukan adalah sebagai berikut.
+
+-   $H_0$: Rerata `d` di `kelompok` eksperimen sama dengan `kelompok` kontrol. Hal ini dapat disimbolkan dengan $\mu_{d_\text{eks}} = \mu_{d_\text{ktrl}}$ atau $\mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} = 0$.
+
+-   $H_A$: Rerata `d` di `kelompok` eksperimen lebih besar dari `kelompok` kontrol. Pernyataan ini dapat disimbolkan dengan $\mu_{d_\text{eks}} > \mu_{d_\text{ktrl}}$ atau $\mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} > 0$.
+
+## Tingkat Signifikansi
+
+Kita gunakan tingkat signifikansi $\alpha = \text{0,05}$.
+
+## Variabilitas Statistik
+
+Statistik sampel yang kita gunakan dalam uji hipotesis ini adalah statistik $t$. Statistik $t$ untuk `sampel_prepost` nilainya kurang lebih seperti berikut.
+
+```{r}
+#| label: hitung-t-sampel-prepost
+
+M_eks_prepost <- sampel_prepost %>% 
+  filter(kelompok == "eksperimen") %>% 
+  summarise(M = mean(d))
+M_ktrl_prepost <- sampel_prepost %>% 
+  filter(kelompok == "kontrol") %>% 
+  summarise(M = mean(d))
+var_eks_prepost <- sampel_prepost %>% 
+  filter(kelompok == "eksperimen") %>% 
+  summarise(Var = var(d))
+var_ktrl_prepost <- sampel_prepost %>% 
+  filter(kelompok == "kontrol") %>% 
+  summarise(Var = var(d))
+n_eks_prepost <- sampel_prepost %>% 
+  filter(kelompok == "eksperimen") %>% 
+  nrow()
+n_ktrl_prepost <- sampel_prepost %>% 
+  filter(kelompok == "kontrol") %>% 
+  nrow()
+
+M_eks_prepost <- M_eks_prepost[1,1]
+M_ktrl_prepost <- M_ktrl_prepost[1,1]
+var_eks_prepost <- var_eks_prepost[1,1]
+var_ktrl_prepost <- var_ktrl_prepost[1,1]
+
+t_prepost <- (M_eks_prepost - M_ktrl_prepost) / sqrt(var_eks_prepost / n_eks_prepost + var_ktrl_prepost / n_ktrl_prepost)
+
+print(t_prepost)
+```
+
+Nilai tersebut dihitung dengan menggunakan rumus berikut dan mengasumsikan bahwa hipotesis nol benar, yaitu $\mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} = 0$.
+
+$$
+t = \frac{\left( \bar{x}_{d_\text{eks}} - \bar{x}_{d_\text{ktrl}} \right) - \left( \mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} \right)}{\sqrt{\frac{s_{d_\text{eks}}^2}{n_{d_\text{eks}}} + \frac{s_{d_\text{ktrl}}^2}{n_{d_\text{ktrl}}}}} \approx \text{5,368}
+$$
+
+Distribusi statistik $t$ dari semua kemungkinan sampelnya mengikuti bentuk distribusi $t$ dengan derajat bebas nilainya kurang lebih seperti berikut.
+
+# Daftar Rujukan
+
+::: {#refs}
+:::
