@@ -1,8 +1,8 @@
 ---
 title: "Analisis Data Hasil Eksperimen Semu"
-subtitle: "Melakukan Uji Hipotesis dengan Uji $t$ dan ANCOVA"
+subtitle: "Melakukan Uji $t$ dan Analisis Kovarians (ANKOVA) dengan R"
 abstract: |
-  Eksperimen semu atau eksperimen kuasi merupakan salah satu metode penelitian yang sering digunakan untuk mengetahui apakah terdapat pengaruh variabel-variabel bebas terhadap variabel terikat. Artikel ini memberikan pemaparan tentang dua metode statistik yang digunakan untuk menganalisis data hasil eksperimen semu tersebut. Metode statistik tersebut adalah uji $t$ dan uji ANCOVA (*analysis of covariance*). Kedua metode statistik tersebut didemonstrasikan secara cukup detail dengan menggunakan R untuk menyelesaikan permasalahan statistik dengan konteks pendidikan.
+  Eksperimen semu atau eksperimen kuasi merupakan salah satu metode penelitian yang sering digunakan untuk mengetahui apakah terdapat pengaruh variabel-variabel bebas terhadap variabel terikat. Artikel ini memberikan pemaparan tentang dua metode statistik yang digunakan untuk menganalisis data hasil eksperimen semu tersebut. Metode statistik tersebut adalah uji $t$ dan uji ANKOVA (analisis kovarians) atau ANCOVA (*analysis of covariance*). Kedua metode statistik tersebut didemonstrasikan secara cukup detail dengan menggunakan R untuk menyelesaikan permasalahan statistik dengan konteks pendidikan.
 date: 2023/12/04
 author:
   - name: Yosep Dwi Kristanto
@@ -16,7 +16,7 @@ format:
   html:
     toc: true
     number-sections: true
-    keywords: "eksperimen, eksperimen semu, eksperimen kuasi, pemodelan, normalitas, Shapiro-Wilk, uji t, ANCOVA, analysis of covariance, Welch, R"
+    keywords: "eksperimen, eksperimen semu, eksperimen kuasi, pemodelan, normalitas, Shapiro-Wilk, uji t, ANCOVA, analysis of covariance, analisis kovarians, ankova, Welch, R"
     page-layout: article
     code-fold: true
     code-tools: true
@@ -49,19 +49,15 @@ library(ggpubr)
 
 [^1]: Cerita di bagian ini merupakan cerita fiktif. Cerita tersebut digunakan untuk mengilustrasikan salah satu konteks penggunaan metode eksperimen semu dalam menjawab pertanyaan tentang pengaruh satu atau lebih variabel terhadap variabel lainnya.
 
-Seorang guru ingin mengimplementasikan sebuah metode pembelajaran di kelasnya agar hasil belajar peserta didiknya di topik transformasi fungsi menjadi lebih baik. Tak hanya itu, dia juga ingin mengetahui apakah penggunaan metode pembelajaran tersebut betul-betul berpengaruh positif terhadap hasil belajar peserta didiknya.[^2] Setelah dia berdiskusi dengan rekan-rekannya dan seorang akademisi yang ahli di bidang pembelajaran matematika, dia memiliki hipotesis seperti ini.
+Seorang guru ingin mengimplementasikan sebuah metode pembelajaran di kelasnya agar hasil belajar peserta didiknya di topik transformasi fungsi menjadi lebih baik. Tak hanya itu, dia juga ingin mengetahui apakah penggunaan metode pembelajaran tersebut betul-betul berpengaruh terhadap hasil belajar peserta didiknya.
 
-[^2]: Pengaruh positif di sini berarti penggunaan metode pembelajaran tersebut membuat hasil belajar anak didik guru tersebut menjadi lebih tinggi dibandingkan ketika tidak digunakannya metode itu.
-
-> Metode pembelajaran tersebut berpengaruh positif terhadap hasil belajar peserta didik.
-
-Setelah berhipotesis demikian, guru tersebut merencanakan sebuah eksperimen semu secara cermat [ulasan metode ini dapat dibaca di @gopalan2020]. Dia memilih satu kelas kontrol dan satu kelas eksperimen.
+Untuk menjawab pertanyaannya, guru tersebut merencanakan sebuah eksperimen semu secara cermat [ulasan metode ini dapat dibaca di @gopalan2020]. Dia memilih satu kelas kontrol dan satu kelas eksperimen dari kelas-kelas yang dia ampu.
 
 # Data dan Konteksnya
 
-Sebelum dan setelah dilaksanakan pembelajaran, baik peserta didik di kelas kontrol maupun kelas eksperimen diminta untuk mengerjakan tes awal dan tes akhir. Dengan demikian, setelah eksperimen selesai dilakukan, guru tersebut memperoleh tiga variabel utama, yaitu `kelompok`, `tes_awal`, dan `tes_akhir`. Selain itu, dia juga memiliki variabel `id` sebagai identifikasi tiap-tiap peserta didiknya. Rekap datanya dia simpan dan dia namai sebagai `sampel_prepost`.[^3] Data guru tersebut ditunjukkan seperti berikut.
+Sebelum dan setelah dilaksanakan pembelajaran, baik peserta didik di kelas kontrol maupun kelas eksperimen diminta untuk mengerjakan tes awal dan tes akhir. Dengan demikian, setelah eksperimen selesai dilakukan, guru tersebut memperoleh tiga variabel utama, yaitu `kelompok`, `tes_awal`, dan `tes_akhir`. Selain itu, dia juga memiliki variabel `id` sebagai identifikasi tiap-tiap peserta didiknya. Rekap datanya dia simpan dan dia namai sebagai `sampel_prepost`.[^2] Data guru tersebut ditunjukkan seperti berikut.
 
-[^3]: Data sampel ini bukan merupakan data riil. Akan tetapi, data tersebut merupakan data yang dibuat oleh pengarang. Hal ini ditujukan untuk mempermudah dan memperjelas penggunaan metode statistik yang akan dipaparkan pada bagian berikutnya.
+[^2]: Data sampel ini bukan merupakan data riil. Akan tetapi, data tersebut merupakan data yang dibuat oleh pengarang. Hal ini ditujukan untuk mempermudah dan memperjelas penggunaan metode statistik yang akan dipaparkan pada bagian berikutnya.
 
 ```{r}
 #| label: sampel-prepost
@@ -101,15 +97,17 @@ Set data `sampel_prepost` tersebut telah disajikan secara rapi. Hal ini dikarena
 
 # Perencanaan Analisis Data
 
-Tujuan analisis data kita adalah untuk menguji hipotesis guru tersebut. Untuk melakukannya, paling tidak kita dapat menggunakan dua metode statistik. Pertama, kita dapat menggunakan uji $t$ terhadap kenaikan skor setiap peserta didik. Kedua, kita dapat menggunakan *analysis of covariance* (ANCOVA) terhadap skor `tes_akhir` setiap peserta didik. Perbandingan mendetail tentang kedua metode statistik tersebut dapat ditemukan di Wright [-@wright2006].
+Tujuan analisis data kita adalah untuk menjawab pertanyaan guru tersebut. Untuk melakukannya, paling tidak kita dapat menggunakan dua metode statistik. Pertama, kita dapat menggunakan uji $t$ terhadap kenaikan skor setiap peserta didik. Kedua, kita dapat menggunakan *analysis of covariance* (ANCOVA) atau analisis kovarians (ANKOVA)[^3] terhadap skor `tes_akhir` setiap peserta didik. Perbandingan mendetail tentang kedua metode statistik tersebut dapat ditemukan di Wright [-@wright2006].
 
-Berdasarkan hipotesis yang telah dikemukakan guru tersebut, kita dapat mengidentifikasi bahwa variabel terikatnya adalah hasil belajar dan variabel bebasnya adalah `kelompok`. Dengan uji $t$, hasil belajar tersebut dimaknai sebagai peningkatan skor tesnya, yaitu `tes_akhir` dikurangi `tes_awal` untuk setiap peserta didiknya. Dengan demikian, modelnya ditunjukkan pada @eq-t-eks-semu berikut.
+[^3]: Padanan *analysis of covariance* (ANCOVA) dalam Bahasa Indonesia berdasarkan aplikasi Pasti (Padanan Istilah) yang dikembangkan oleh Badan Pengembangan dan Pembinaan Bahasa adalah analisis kovarians atau ankova.
+
+Berdasarkan pertanyaan yang telah dikemukakan guru tersebut, kita dapat mengidentifikasi bahwa variabel terikatnya adalah hasil belajar dan variabel bebasnya adalah `kelompok`. Dengan uji $t$, hasil belajar tersebut dimaknai sebagai peningkatan skor tesnya, yaitu `tes_akhir` dikurangi `tes_awal` untuk setiap peserta didiknya. Dengan demikian, modelnya ditunjukkan pada @eq-t-eks-semu berikut.
 
 $$
 \text{tes_akhir}_i-\text{tes_awal}_i = \beta_0 + \beta_1 \text{kelompok}_i + e_i
 $$ {#eq-t-eks-semu}
 
-Ketika menggunakan ANCOVA, salah satu yang bisa kita lakukan adalah dengan menggunakan `skor_akhir` sebagai variabel terikatnya dan `kelompok` sebagai variabel bebasnya. Tak hanya itu, kita juga perlu menggunakan `tes_awal` sebagai kovariatnya. Di dalam ANCOVA, kovariat ini merupakan variabel bebas kontinu yang juga mempengaruhi variabel terikatnya. Model dari ANCOVA ditunjukkan pada @eq-ancova-eks-semu berikut.
+Ketika menggunakan ANKOVA, salah satu yang bisa kita lakukan adalah dengan menggunakan `skor_akhir` sebagai variabel terikatnya dan `kelompok` sebagai variabel bebasnya. Tak hanya itu, kita juga perlu menggunakan `tes_awal` sebagai kovariatnya. Di dalam ANCOVA, kovariat ini merupakan variabel bebas kontinu yang juga mempengaruhi variabel terikatnya. Model dari ANKOVA ditunjukkan pada @eq-ancova-eks-semu berikut.
 
 $$
 \text{tes_akhir}_i = \beta_0 + \beta_1 \text{kelompok}_i + \beta_2 \text{tes_awal}_i + e_i
@@ -162,14 +160,13 @@ Selain itu, kita juga dapat memvisualisasikan skor `tes_awal` dan `tes_akhir` de
 sampel_prepost %>% 
   ggpaired(cond1 = "tes_awal",
            cond2 = "tes_akhir",
-           color = "condition",
-           line.color = "gray",
+           fill = "condition",
+           line.color = "gray50",
            line.size = 0.3,
            palette = "Dark2") +
   theme_bw() +
   theme(axis.title.x = element_blank(),
-        legend.position = "bottom",
-        legend.title = element_blank()) +
+        legend.position = "none") +
   labs(y = "Skor") +
   facet_grid(~kelompok)
 
@@ -214,9 +211,10 @@ Sekarang kita dapat membandingkan peningkatan skor tersebut antara `kelompok` ek
 
 sampel_prepost %>% 
   ggplot(aes(x = kelompok, y = d,
-             color = kelompok)) +
-  geom_boxplot() +
+             fill = kelompok)) +
+  geom_boxplot(alpha = 0.6) +
   geom_point(position = "jitter") +
+  scale_fill_brewer(palette = "Dark2") +
   theme_bw() +
   theme(legend.position = "none")
 
@@ -288,7 +286,7 @@ Bagian-bagian berikutnya menjelaskan tentang tahapan-tahapan yang cukup detail t
 
 ## Hipotesis Nol dan Alternatifnya
 
-Hipotesis awal guru tersebut menyatakan bahwa metode pembelajaran yang digunakan berpengaruh positif terhadap hasil belajar peserta didik, dalam hal ini peningkatan skor dari `tes_awal` ke `tes_akhir`. Dengan demikian, hipotesis nol dan hipotesis alternatif untuk uji hipotesis yang akan kita lakukan adalah sebagai berikut.
+Pertanyaan yang akan kita jawab adalah apakah metode pembelajaran yang digunakan guru tersebut berpengaruh terhadap hasil belajar peserta didik. Untuk menjawabnya, kita fokus pada peningkatan hasil belajarnya, yaitu peningkatan skor dari `tes_awal` ke `tes_akhir`. Dengan demikian, hipotesis nol dan hipotesis alternatif untuk uji hipotesis yang akan kita lakukan adalah sebagai berikut.
 
 -   $H_0$: Rerata `d` di `kelompok` eksperimen sama dengan `kelompok` kontrol. Hal ini dapat disimbolkan dengan $\mu_{d_\text{eks}} = \mu_{d_\text{ktrl}}$ atau $\mu_{d_\text{eks}} - \mu_{d_\text{ktrl}} = 0$.
 
@@ -415,6 +413,430 @@ t_test(data = sampel_prepost,
        alternative = "greater")
 
 ```
+
+# Analisis Kovarians
+
+Sekarang kita akan menggunakan metode statistik yang berbeda untuk menganalisis data yang sama, yaitu data `sampel_prepost`. Metode yang akan kita gunakan adalah analisis kovarians (ANKOVA). Metode ini pada dasarnya merupakan gabungan dari analisis varians (ANOVA) dan regresi linear. Oleh karena itu, kondisi-kondisi yang diperlukan untuk menggunakan ANKOVA sama dengan kondisi-kondisi ANOVA, tetapi ditambah dengan beberapa kondisi tertentu.
+
+Kondisi-kondisi atau asumsi-asumsi statistik dari ANKOVA adalah sebagai berikut [@rutherford2001, pp. 123-127].
+
+-   **Bebas.** Setiap observasi dalam tiap-tiap kelompok dalam sampel bebas.
+
+-   **Normalitas.** Galat data pada setiap kelompoknya berasal dari populasi yang berdistribusi normal dengan pusat di nol.
+
+-   **Homogenitas variansi.** Galat data pada setiap kelompoknya berasal dari populasi yang memiliki variansi sama.
+
+-   **Kovariat bebas terhadap variabel bebas lainnya.** Tidak ada pengaruh variabel bebas terhadap kovariatnya.
+
+-   **Linearitas.** Hubungan antara kovariat dan variabel terikatnya linear untuk tiap-tiap kelompoknya.
+
+-   **Kesejajaran.** Koefisien regresi variabel terikatnya untuk kovariatnya homogen pada setiap kelompoknya.
+
+Tiga kondisi pertama tersebut merupakan kondisi-kondisi yang sama untuk melakukan ANOVA. Tiga kondisi berikutnya merupakan kondisi-kondisi khusus untuk melakukan ANKOVA. Keenam kondisi tersebut akan kita periksa setelah melakukan ANKOVA, tetapi sebelum menginterpretasi hasilnya. Untuk itu, kita lakukan ANKOVA yang dimulai dengan perumusan hipotesis nol dan alternatifnya.
+
+## Hipotesis Nol dan Alternatifnya
+
+Berikut ini adalah hipotesis nol dan hipotesis alternatif dalam ANKOVA yang akan kita lakukan.
+
+-   $H_0$: Dengan menggunakan `tes_awal` sebagai kovariat, rerata `tes_akhir` pada setiap `kelompok`-nya sama, yaitu $\mu_{\text{eks}}=\mu_{\text{ktrl}}$.
+-   $H_A$: Dengan menggunakan `tes_awal` sebagai kovariat, rerata `tes_akhir` pada setiap `kelompok`-nya berbeda, yaitu $\mu_{\text{eks}}\neq\mu_{\text{ktrl}}$.
+
+::: callout-note
+### Catatan {.unnumbered .unlisted}
+
+Hipotesis nol dan hipotesis alternatif yang dirumuskan di atas hanya berlaku jika data kita terdiri dari dua kategori atau kelompok. Jika data kita memiliki lebih dari dua kategori, hipotesis nol dan alternatifnya adalah sebagai berikut.
+
+-   $H_0$: Dengan mempertimbangkan kovariat, $\mu_1=\mu_2=…=\mu_k$, dengan $k$ adalah banyaknya kategori dalam data.
+
+-   $H_A$: Dengan mempertimbangkan kovariat, terdapat paling tidak sepasang rerata yang berbeda, yaitu $\mu_i\neq\mu_j$ untuk $i \neq j$.
+:::
+
+## Tingkat Signifikansi
+
+Kita menggunakan tingkat signifikansi yang sama dengan uji $t$ yang telah kita lakukan, yaitu $\alpha=\text{0,05}$.
+
+## Variabilitas Statistik
+
+Statistik yang digunakan dalam ANKOVA adalah statistik $F$. Untuk menguji perbedaan rerata antar kategori, derajat bebas yang digunakan adalah $\text{df}_1=k-1$ dan $\text{df}_2=n-k-1$.[^6] Dengan demikian, untuk data `sampel_prepost` yang kita miliki, derajat-derajat bebasnya adalah $\text{df}_1=2-1=1$ dan $\text{df}_2=66-2-1=63$.
+
+[^6]: Nilai $\text{df}_2$ pada ANKOVA besarnya satu kurangnya dari $\text{df}_2$ ketika kita melakukan ANOVA karena 1 tersebut 'diberikan' kepada kovariat.
+
+Oleh karena itu, variabilitas statistik $F$ untuk semua kemungkinan sampelnya mengikuti distribusi $F$ yang ditunjukkan pada @fig-dist-F-prepost.
+
+```{r}
+#| label: fig-dist-F-prepost
+#| fig-cap: Distribusi $F$ dengan $\text{df}_1=1$ dan $\text{df}_2=63$.
+#| fig-asp: 0.5625
+
+ggplot(data.frame(x = c(0, 5)), aes(x = x)) +
+  geom_function(fun = df,
+                args = list(df1 = 1, df2 = 3),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "F")
+
+```
+
+## Model, Statistik Uji, dan Nilai-*P* {#sec-model-stat-p}
+
+Kita dapat membuat model untuk data sampel kita dengan kode seperti berikut.
+
+```{r}
+#| label: model-ankova-prepost
+#| code-fold: false
+
+# Pelevelan ulang variabel `kelompok` agar modelnya menggunakan
+# kelompok kontrol sebagai baseline-nya.
+sampel_prepost <- sampel_prepost %>% 
+  mutate(kelompok = fct_relevel(kelompok, "kontrol", "eksperimen"))
+
+# Membuat model
+model_ankova_prepost <- lm(tes_akhir ~ tes_awal + kelompok,
+                           data = sampel_prepost)
+model_ankova_prepost
+```
+
+Kita dapat memaknai model tersebut sebagai berikut: Jika skor `tes_awal` nilainya konstan, skor `tes_akhir` pada `kelompok` eksperimen nilainya 5,186 lebih besar dari `kelompok` kontrol. Dengan demikian, model tersebut menunjukkan bahwa secara rata-rata skor `tes_akhir` pada `kelompok` eksperimen berbeda dari (atau secara spesifik lebih besar dari) `kelompok` kontrol.
+
+Untuk melihat apakah perbedaan tersebut secara statistik signifikan, kita perlu menghitung nilai-*P*. Nilai tersebut kita peroleh dengan menggunakan statistik uji $F$. Dengan menggunakan distribusi $F$ seperti yang ditunjukkan pada @fig-dist-F-prepost, kita dapat menentukan nilai-*P*. Nilai-*P* tersebut merupakan luas daerah di sebelah kanan statistik uji $F$ yang kita hitung tersebut.
+
+Penghitungan statistik uji $F$ dan nilai-*P* dapat kita lakukan dengan kode berikut.
+
+```{r}
+#| label: ankova-prepost
+#| code-fold: false
+
+sampel_prepost %>% 
+  anova_test(tes_akhir ~ tes_awal + kelompok)
+
+```
+
+Karena yang ingin kita ketahui adalah pengaruh dari `kelompok`, kita perlu mencermati nilai $F$ dan *P* pada baris kelompok. Dari perhitungan tersebut, kita mendapatkan $F\approx\text{28,407}$ dan nilai-P yang sangat kecil, yaitu sekitar $\text{1,41}\cdot 10^{-6}$.
+
+## Pemeriksanaan Kondisi
+
+Sebelum kita mengintepretasi hasil uji ANKOVA yang telah kita lakukan, kita perlu memeriksa apakah data `sampel_prepost` dan modelnya memenuhi kondisi-kondisi ANKOVA.
+
+Untuk kepentingan demonstrasi, kita anggap bahwa setiap observasi di tiap-tiap `kelompok` dalam data `sampel_prepost` bebas antara satu dengan yang lain.[^7] Selanjutnya, kita uji normalitas galatnya untuk tiap-tiap `kelompok`.
+
+[^7]: Sekali lagi, pemeriksaan kondisi pertama ini dilewati karena hanya untuk kepentingan demonstrasi ANKOVA. Jika Anda menggunakan ANKOVA untuk menganalisis data sebuah penelitian, penting bagi Anda untuk menyediakan argumen yang cukup mengapa setiap observasi dalam data Anda bebas.
+
+### Normalitas Galat {#sec-normalitas-galat}
+
+Untuk menguji normalitas galat, kita dapat menggunakan cara visual, yaitu dengan memanfaatkan diagram peluang normal. Perhatikan @fig-diagram-peluang-normal-prepost.
+
+```{r}
+#| label: fig-diagram-peluang-normal-prepost
+#| fig-cap: Diagram peluang normal `test_akhir` pada setiap `kelompok`-nya.
+#| fig-asp: 0.5625
+
+data_model_ankova_prepost <- augment(model_ankova_prepost) %>% 
+  select(1:5)
+
+data_model_ankova_prepost %>% 
+  ggqqplot(x = ".resid",
+           color = "kelompok",
+           palette = "Dark2") +
+  facet_grid(~ kelompok) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  labs(x = "Teoretis", y = "Sampel")
+```
+
+Berdasarkan @fig-diagram-peluang-normal-prepost tersebut, kita dapat mengamati bahwa titik-titik dalam `kelompok` eksperimen masih berada dalam selang kepercayaannya (daerah berwarna merah). Akan tetapi, hal tersebut tidak terjadi pada `kelompok` kontrol. Hal ini menunjukkan bahwa asumsi bahwa galat-galat pada `kelompok` kontrol berasal dari populasi yang berdistribusi normal merupakan asumsi yang "tidak aman".
+
+Dengan demikian, kita putuskan untuk melakukan uji normalitas dengan menggunakan uji Shapiro-Wilk. Hasilnya ditunjukkan pada @tbl-uji-shapiro-wilk-resid-prepost berikut.
+
+```{r}
+#| label: tbl-uji-shapiro-wilk-resid-prepost
+#| tbl-cap: Nilai-P yang cukup besar pada `kelompok` eksperimen dan kontrol menunjukkan bahwa kita gagal menolak asumsi normalitas. Dengan demikian, kita cukup aman untuk mengasumsikan bahwa variabel tersebut berasal dari populasi yang berdistribusi normal pada setiap `kelompok`-nya.
+
+data_model_ankova_prepost %>% 
+  group_by(kelompok) %>% 
+  shapiro_test(.resid) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "condensed"),
+                full_width = FALSE)
+
+```
+
+Berdasarkan @tbl-uji-shapiro-wilk-resid-prepost tersebut, asumsi bahwa galat pada `kelompok` kontrol maupun eksperimen berasal dari populasi yang berdistribusi normal gagal ditolak. Dengan demikian, asumsi normalitas galat masih dapat kita lakukan.
+
+### Homogenitas Variansi Galat {#sec-var-homogen}
+
+Kondisi ketiga dapat diperiksa dengan menggunakan metode visual maupun uji hipotesis. Untuk menggunakan metode visual, kita dapat menjajarkan dua boxplot galat pada tiap `kelompok`-nya dan kita amati apakah sebarannya sama. Perhatikan @fig-homogenitas-var-resid-prepost berikut.
+
+```{r}
+#| label: fig-homogenitas-var-resid-prepost
+#| fig-cap: Boxplot `.resid` pada setiap `kelompok` dalam modelnya.
+#| fig-asp: 0.5625
+
+data_model_ankova_prepost %>% 
+  ggplot(aes(x = kelompok, y = .resid)) +
+  geom_boxplot(aes(fill = kelompok),
+               alpha = 0.6) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+```
+
+Berdasarkan @fig-homogenitas-var-resid-prepost, kita mengamati bahwa sebaran galat pada `kelompok` eksperimen maupun kontrol kurang lebih sama. Dengan demikian, kita dapat mengasumsikan bahwa variansi galat pada kedua `kelompok` tersebut homogen. Asumsi tersebut tidak ditolak ketika kita melakukan uji Levene yang hasilnya disajikan pada @tbl-uji-levene-resid-prepost berikut.
+
+```{r}
+#| label: tbl-uji-levene-resid-prepost
+#| tbl-cap: Hasil uji homogenitas variansi terhadap `.resid` pada setiap `kelompok`-nya dengan menggunakan uji Levene.
+
+data_model_ankova_prepost %>% 
+  levene_test(.resid ~ factor(kelompok)) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                latex_options = c("striped",
+                                  "condensed"),
+                full_width = FALSE)
+
+```
+
+### Kebebasan antara Kovariat dan Variabel Bebas
+
+Untuk memeriksa apakah `tes_awal` dan `kelompok` bebas satu sama lain, kita dapat menggunakan metode visual. Perhatikan @fig-tes_awal-kelompok-bebas-prepost.
+
+```{r}
+#| label: fig-tes_awal-kelompok-bebas-prepost
+#| fig-cap: Visualisasi skor `tes_awal` pada tiap-tiap `kelompok`-nya.
+
+sampel_prepost %>% 
+  ggplot(aes(x = factor(1), y = tes_awal,
+             color = kelompok)) +
+  geom_point(position = "jitter",
+             size = 3,
+             alpha = 0.75) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+```
+
+Berdasarkan @fig-tes_awal-kelompok-bebas-prepost, kita dapat melihat bahwa skor `tes_awal` tidak berhubungan dengan `kelompok`. Hal ini dikonfirmasi oleh model berikut bahwa nilai-*P* dari `kelompok` cukup besar, yaitu 0,442. Sehingga hubungannya tidak signifikan.
+
+```{r}
+#| label: uji-bebas-kov-var-bebas-prepost
+
+model_tak_prepost <- lm(tes_awal ~ kelompok, data = sampel_prepost)
+summary(model_tak_prepost)
+```
+
+### Linearitas Kovariat dan Variabel Terikat
+
+Kondisi berikutnya yang perlu diperiksa adalah linearitas antara kovariat, yaitu `tes_awal`, dan variabel terikatnya, yaitu `tes_akhir`. Hal ini dapat diperiksa secara visual dengan menggunakan diagram pencar, seperti yang disajikan pada @fig-diagram-pencar-tes_awal-tes_akhir-prepost.
+
+```{r}
+#| label: fig-diagram-pencar-tes_awal-tes_akhir-prepost
+#| fig-cap: Hubungan antara `tes_awal` dan `tes_akhir` dalam data `sampel_prepost`.
+#| fig-asp: 0.5625
+
+sampel_prepost %>% 
+  ggplot(aes(x = tes_awal, y = tes_akhir, color = kelompok)) +
+  geom_point(size = 2,
+             alpha = 0.6) +
+  geom_smooth(method = "lm",
+              formula = y ~ x) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  facet_grid(~ kelompok)
+```
+
+Berdasarkan @fig-diagram-pencar-tes_awal-tes_akhir-prepost tersebut, kita dapat melihat bahwa `tes_awal` dan `tes_akhir` memiliki hubungan yang linear. Agar semakin meyakinkan, kita juga dapat mengamati diagram pencar yang menggambarkan residu atau galat (`.resid`) setiap `kelompok`-nya.[^8] Diagram pencar tersebut ditunjukkan pada @fig-diagram-pencar-residu-lm-tes_awal-tes_akhir-prepost.
+
+[^8]: Galat yang dimaksud di sini berbeda dengan galat yang digunakan dalam @sec-normalitas-galat dan @sec-var-homogen.
+
+```{r}
+#| label: fig-diagram-pencar-residu-lm-tes_awal-tes_akhir-prepost
+#| fig-cap: Residu model linear antara `tes_awal` dan `tes_akhir` dalam data `sampel_prepost`.
+#| fig-asp: 0.5625
+
+model_awal_akhir_eks_prepost <- lm(tes_akhir ~ tes_awal,
+                               data = filter(sampel_prepost,
+                                             kelompok == "eksperimen")) %>% 
+  augment() %>% 
+  mutate(kelompok = "eksperimen") %>% 
+  select(kelompok,
+         tes_akhir,
+         tes_awal,
+         .fitted,
+         .resid,
+         .std.resid)
+
+model_awal_akhir_ktrl_prepost <- lm(tes_akhir ~ tes_awal,
+                               data = filter(sampel_prepost,
+                                             kelompok == "kontrol")) %>% 
+  augment() %>% 
+  mutate(kelompok = "kontrol") %>% 
+  select(kelompok,
+         tes_akhir,
+         tes_awal,
+         .fitted,
+         .resid,
+         .std.resid)
+
+model_awal_akhir_prepost <- rbind(model_awal_akhir_eks_prepost,
+                                  model_awal_akhir_ktrl_prepost)
+
+model_awal_akhir_prepost %>% 
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_hline(yintercept = 0) +
+  geom_point(aes(color = kelompok),
+             size = 2,
+             alpha = 0.6) +
+  facet_grid(~kelompok) +
+  theme_bw() +
+  scale_color_brewer(palette = "Dark2") +
+  theme(legend.position = "none")
+```
+
+@fig-diagram-pencar-residu-lm-tes_awal-tes_akhir-prepost tersebut menunjukkan bahwa titik-titik yang merepresentasikan residunya menyebar secara acak tanpa pola yang sistematis. Dengan demikian, kita dapat mengasumsikan bahwa hubungan antara `tes_awal` dan `tes_akhir` merupakan hubungan yang linear.
+
+::: callout-note
+### Catatan {.unnumbered .unlisted}
+
+Adanya pola yang sistematis terhadap titik-titik pada diagram pencar residu mengindikasikan bahwa hubungan variabel-variabelnya tidak mengikuti model linear. Misalnya, variabel-variabel `x1` dan `x2` yang hubungannya disajikan pada @fig-x1-x2-prepost berikut tidak mengikuti model linear.
+
+```{r}
+#| label: fig-x1-x2-prepost
+#| fig-cap: Hubungan antara variabel-variabel `x1` dan `x2` tidak linear.
+#| fig-asp: 0.5625
+
+sampel_parabola_prepost <- tribble(
+  ~x1,	~x2,
+  0,	0,
+  0.5,	1.95,
+  1,	3.8,
+  1.5,	5.55,
+  2,	7.2,
+  2.5,	8.75,
+  3,	10.2,
+  3.5,	11.55,
+  4,	12.8,
+  4.5,	13.95,
+  5,	15,
+  5.5,	15.95,
+  6,	16.8,
+  6.5,	17.55,
+  7,	18.2,
+  7.5,	18.75,
+  8,	19.2,
+  8.5,	19.55,
+  9,	19.8,
+  9.5,	19.95,
+  10,	20,
+  10.5,	19.95,
+  11,	19.8,
+  11.5,	19.55,
+  12,	19.2,
+  12.5,	18.75,
+  13,	18.2,
+  13.5,	17.55,
+  14,	16.8,
+  14.5,	15.95,
+  15,	15,
+  15.5,	13.95,
+  16,	12.8,
+  16.5,	11.55,
+  17,	10.2
+)
+
+sampel_parabola_prepost %>% 
+  ggplot(aes(x = x1, y = x2)) +
+  geom_point(size = 2) +
+  theme_bw()
+```
+
+Jika kedua variabel tersebut dipaksa untuk dimodelkan ke dalam model linear, diagram pencar nilai-nilai residunya akan mengikuti pola yang sistematis. Hal ini ditunjukkan pada @fig-resid-x1-x2-prepost.
+
+::: {#fig-resid-x1-x2-prepost layout-ncol="2"}
+```{r}
+#| label: fig-x1-x2-lm-prepost
+#| fig-cap: Hubungan antara `x1` dan `x2` yang dimodelkan sebagai model linear
+
+sampel_parabola_prepost %>% 
+  ggplot(aes(x = x1, y = x2)) +
+  geom_point(size = 2) +
+  geom_smooth(method = "lm",
+              formula = y ~ x) +
+  theme_bw()
+```
+
+```{r}
+#| label: fig-x1-x2-residu-lm-prepost
+#| fig-cap: Nilai-nilai residunya mengikuti pola yang tidak acak, tetapi sistematis.
+
+model_x1_x2_prepost <- lm(x2 ~ x1,
+                          data = sampel_parabola_prepost) %>% 
+  augment()
+
+model_x1_x2_prepost %>% 
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_hline(yintercept = 0) +
+  geom_point(size = 2) +
+  theme_bw()
+
+```
+
+Residu yang mengikuti pola sistematis mengindikasikan bahwa hubungan variabel-variabelnya tidak linear.
+:::
+:::
+
+### Kesejajaran
+
+Kondisi terakhir yang perlu diperiksa adalah kondisi kesejajaran. Hal ini dapat kita mulai dengan menggunakan metode visual, yaitu menggambar diagram pencar hubungan antara `tes_awal` dan `tes_akhir` pada tiap-tiap `kelompok`-nya. Perhatikan @fig-diagram-pencar-tes_awal-tes_akhir-prepost berikut.
+
+```{r}
+#| label: fig-diagram-pencar-tes_awal-tes_akhir-kelompok-prepost
+#| fig-cap: Model linear antara `tes_awal` dan `tes_akhir` pada tiap-tiap `kelompok`-nya.
+#| fig-asp: 0.5625
+
+sampel_prepost %>% 
+  ggplot(aes(x = tes_awal, y = tes_akhir,
+             color = kelompok)) +
+  geom_smooth(method = "lm",
+              formula = y ~ x) +
+  geom_point(size = 2,
+             alpha = 0.6) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+Berdasarkan @fig-diagram-pencar-tes_awal-tes_akhir-kelompok-prepost, kita dapat melihat bahwa kedua garis regresinya kurang lebih sejajar. Pengamatan ini dapat kita perkuat dengan melakukan uji ANOVA yang melibatkan interaksi antara variabel `tes_awal` dan `kelompok`.
+
+```{r}
+#| label: anova-interaksi-prepost
+#| code-fold: false
+
+sampel_prepost %>% 
+  anova_test(tes_akhir ~ kelompok*tes_awal)
+```
+
+Berdasarkan uji ANOVA tersebut, kita mendapatkan nilai-*P* yang cukup besar dari pengaruh interaksi antara `tes_awal` dan `kelompok`. Nilai-*P* tersebut kurang lebih 0,756. Hal ini memperkuat pengamatan visual kita terhadap @fig-diagram-pencar-tes_awal-tes_akhir-kelompok-prepost bahwa garis regresinya kurang lebih sejajar.
+
+Karena data `sampel_prepost` dan modelnya memenuhi kondisi-kondisi ANKOVA, kita dapat menginterpretasi hasil pada @sec-model-stat-p.
+
+## Kesimpulan dan Interpretasi
+
+Pada @sec-model-stat-p, kita mendapatkan nilai-*P* yang sangat kecil, yaitu sekitar $\text{1,41}\cdot 10^{-6}$. Nilai ini lebih kecil dari $\alpha=\text{0,05}$. Kita tolak hipotesis nol. Jadi, dengan mempertimbangkan `tes_awal` sebagai kovariat, terdapat cukup bukti untuk mendukung klaim bahwa rerata `tes_akhir` pada `kelompok` eksperimen berbeda dengan `kelompok` kontrol.
 
 # Daftar Rujukan
 
