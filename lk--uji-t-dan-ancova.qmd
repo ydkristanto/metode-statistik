@@ -16,7 +16,7 @@ format:
   html:
     toc: true
     number-sections: true
-    keywords: "eksperimen, eksperimen semu, eksperimen kuasi, pemodelan, normalitas, Shapiro-Wilk, uji t, ANCOVA, analysis of covariance, analisis kovarians, ankova, Welch, R"
+    keywords: "eksperimen, eksperimen semu, eksperimen kuasi, pemodelan, normalitas, Shapiro-Wilk, uji t, distribusi t, ANCOVA, analysis of covariance, analisis kovarians, ANKOVA, distribusi F, Welch, Wilcoxon, regresi, regresi heterogen, R"
     page-layout: article
     code-fold: true
     code-tools: true
@@ -898,7 +898,7 @@ Untuk menggunakan ANKOVA, kita langsung menentukan model datanya. Model yang dap
 
 Jika kondisi-kondisi tersebut terpenuhi, kita dapat menginterpretasi hasil ANOVA yang telah kita lakukan. Jika kita mendapatkan nilai-*P* yang sangat kecil (kurang dari tingkat signifikansi), kita tolak hipotesis nol. Jika sebaliknya, kita gagal menolak hipotesis nol.
 
-# Membandingkan Model
+# Membandingkan Model {#sec-membandingkan-model}
 
 Kita telah melakukan dua metode statistik yang berbeda, tetapi digunakan untuk menganalisis data yang sama. Meskipun datanya sama, jenis pertanyaan yang dijawab oleh kedua metode tersebut berbeda. Uji $t$ yang telah kita lakukan pada @sec-uji-t-prepost bertujuan untuk menjawab pertanyaan yang berfokus pada peningkatan nilai pada kategori/kelompok yang berbeda. ANKOVA yang kita lakukan pada @sec-ankova-prepost menjawab pertanyaan tentang perbedaan atau kesamaan rerata variabel terikat ketika kita mempertimbangkan kovariatnya.
 
@@ -1060,6 +1060,68 @@ print(SSE_ankova_num_prepost)
 Berdasarkan perhitungan di atas, kita mendapatkan jumlah kuadrat galat dari model ankova yang kita gunakan adalah sekitar `r round(SSE_ankova_num_prepost, 2)`.
 
 Berdasarkan analisis jumlah kuadrat galat, kita mendapatkan bahwa jumlah kuadrat galat dari model ANKOVA lebih kecil daripada uji $t$. Dengan demikian, ANKOVA lebih baik dibandingkan dengan uji $t$ jika dilihat dari jumlah kuadrat galatnya.
+
+# Metode-Metode Alternatif
+
+Dua metode statistik yang telah dipaparkan sebelumnya tentu memiliki kelemahan. Uji $t$ yang dipaparkan pada @sec-uji-t-prepost mempersyaratkan kondisi normalitas. Jika kondisi tersebut tidak terpenuhi, kita masih dapat menggunakan uji nonparametrik alternatifnya, yaitu uji jumlah-peringkat Wilcoxon [baca @Kristanto2021b, pp. 236-241]. Uji ini dapat kita gunakan untuk membandingkan peningkatan skor dari `tes_awal` ke `tes_akhir` antara `kelompok` eksperimen dan kontrol dalam data `sampel_prepost`. Hal tersebut dapat dilakukan di R dengan menggunakan fungsi `wilcox_test()`, salah satu fungsi dari paket {rstatix}. Hasilnya disajikan pada @tbl-wilcox-prepost.
+
+```{r}
+#| label: tbl-wilcox-prepost
+#| tbl-cap: Hasil uji jumlah-peringkat Wilcoxon untuk membandingkan `d` pada `kelompok` eksperimen dan kontrol.
+
+sampel_prepost %>% 
+  wilcox_test(d ~ kelompok) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(bootstrap_options = c("striped",
+                                      "hover",
+                                      "condensed"),
+                full_width = FALSE)
+```
+
+ANKOVA yang dipaparkan pada @sec-ankova-prepost menggunakan model seperti yang dituliskan pada @eq-ancova-eks-semu. Kita juga dapat menggunakan model pada @eq-ancova-alt-eks-semu jika fokus kita adalah membandingkan peningkatan skornya. Model tersebut dapat dibuat dengan menggunakan kode berikut.
+
+```{r}
+#| label: model-ankova-alt-prepost
+#| code-fold: false
+
+model_ankova_alt_prepost <- lm(d ~ tes_awal + kelompok,
+                               data = sampel_prepost)
+print(model_ankova_alt_prepost)
+
+```
+
+Jika kita perhatikan, koefisien-koefisien dalam model tersebut sama dengan model ANKOVA kita sebelumnya, kecuali koefisien kovariatnya, yaitu koefisien `tes_awal`. Koefisien `tes_awal` dalam model ini nilainya satu kurangnya dari koefisien `tes_awal` pada model ANKOVA yang telah kita gunakan sebelumnya. Hal ini sejalan dengan perbandingan @eq-ancova-eks-semu dan @eq-ancova-alt-eks-semu. Karena sebenarnya kedua model ANKOVA tersebut sama, jumlah kuadrat galat yang dihasilkan oleh model-model tersebut juga sama. Kita hitung jumlah kuadrat galat untuk model ANKOVA terakhir ini.
+
+```{r}
+#| label: sse-model-ankova-alt-prepost
+#| code-fold: false
+
+data_model_ankova_alt_prepost <- model_ankova_alt_prepost %>% 
+  augment()
+
+SSE_model_ankova_alt_prepost <- data_model_ankova_alt_prepost %>% 
+  mutate(kuadrat_galat = .resid^2) %>% 
+  summarise(SSE = sum(kuadrat_galat))
+
+SSE_num_model_ankova_alt_prepost <- as.numeric(SSE_model_ankova_alt_prepost[1,1])
+
+print(SSE_num_model_ankova_alt_prepost)
+```
+
+Jumlah kuadrat galat yang nilainya kurang lebih `r round(SSE_num_model_ankova_alt_prepost, 2)` tersebut sama dengan jumlah kuadrat galat dari ANKOVA yang telah kita lakukan pada @sec-ankova-prepost.
+
+ANKOVA memiliki banyak kondisi yang terpenuhi agar kita dapat menginterpretasi hasilnya. Dalam banyak kasus, satu atau beberapa kondisi ANKOVA tersebut tidak terpenuhi. Salah satu kondisi penting yang seringkali tidak terpenuhi adalah kondisi kesejajaran. Jika kondisi kesejajaran tersebut tidak terpenuhi, kita dapat menggunakan metode regresi heterogen. Berbeda dengan ANKOVA, metode ini membedakan koefisien kovariat pada tiap kategori di dalam modelnya. Penjelasan secara lebih detail tentang metode ini dapat dibaca di Rutherford [-@rutherford2001, pp. 145-150].
+
+# Catatan Penutup
+
+Metode eksperimen semu menjadi salah satu pilihan yang masuk akal bagi para peneliti untuk menyelidiki adanya pengaruh satu variabel terhadap variabel lainnya. Pengaruh tersebut perlu diselidiki dengan menggunakan metode statistik yang tepat agar menghasilkan kesimpulan yang akurat. Artikel ini telah mendeskripsikan dua metode statistik yang sering digunakan untuk menganalisis data hasil eksperimen semu.
+
+Metode pertama adalah uji $t$. Ketika uji ini digunakan untuk menganalisis data yang memuat hasil tes awal dan akhir, uji ini berfokus untuk menyelidiki perbedaan peningkatan skor antara kategori satu dengan yang lainnya. Variabel terikat dalam uji ini adalah peningkatan skor sedangkan variabel bebasnya adalah kategori.
+
+Metode kedua adalah ANKOVA atau analisis kovarians. Metode ini merupakan gabungan dari ANOVA (analisis varians) dan regresi linear. Metode ini menggunakan kovariat di dalam modelnya. Seperti yang telah didemonstrasikan pada @sec-membandingkan-model, penggunaan kovariat ini dapat mengurangi jumlah kuadrat galatnya. Hal ini sejalan dengan maksud dan niatan Fisher [-@fisher1932; -@fisher1935] yang menciptakan ANKOVA untuk meningkatkan presisi analisis metode eksperimen.
+
+Baik uji $t$ dan ANKOVA memiliki kelemahan. Untuk itu, artikel ini juga membahas secara singkat metode-metode alternatifnya. Uji jumlah-peringkat Wilcoxon dapat digunakan sebagai alternatif uji $t$ ketika kondisi normalitas tidak terpenuhi. Metode regresi heterogen dapat digunakan sebagai pengganti ANKOVA ketika kondisi kesejajaran tidak terpenuhi.
 
 # Daftar Rujukan
 
