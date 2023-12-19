@@ -414,7 +414,7 @@ t_test(data = sampel_prepost,
 
 ```
 
-# Analisis Kovarians
+# Analisis Kovarians {#sec-ankova-prepost}
 
 Sekarang kita akan menggunakan metode statistik yang berbeda untuk menganalisis data yang sama, yaitu data `sampel_prepost`. Metode yang akan kita gunakan adalah analisis kovarians (ANKOVA). Metode ini pada dasarnya merupakan gabungan dari analisis varians (ANOVA) dan regresi linear. Oleh karena itu, kondisi-kondisi yang diperlukan untuk menggunakan ANKOVA sama dengan kondisi-kondisi ANOVA, tetapi ditambah dengan beberapa kondisi tertentu.
 
@@ -496,10 +496,11 @@ sampel_prepost <- sampel_prepost %>%
 # Membuat model
 model_ankova_prepost <- lm(tes_akhir ~ tes_awal + kelompok,
                            data = sampel_prepost)
+koef_eks_prepost <- as.numeric(model_ankova_prepost[[1]][3])
 model_ankova_prepost
 ```
 
-Kita dapat memaknai model tersebut sebagai berikut: Jika skor `tes_awal` nilainya konstan, skor `tes_akhir` pada `kelompok` eksperimen nilainya 5,186 lebih besar dari `kelompok` kontrol. Dengan demikian, model tersebut menunjukkan bahwa secara rata-rata skor `tes_akhir` pada `kelompok` eksperimen berbeda dari (atau secara spesifik lebih besar dari) `kelompok` kontrol.
+Kita dapat memaknai model tersebut sebagai berikut: Jika skor `tes_awal` nilainya konstan, skor `tes_akhir` pada `kelompok` eksperimen nilainya `r round(koef_eks_prepost, 3)` lebih besar dari `kelompok` kontrol. Dengan demikian, model tersebut menunjukkan bahwa secara rata-rata skor `tes_akhir` pada `kelompok` eksperimen berbeda dari (atau secara spesifik lebih besar dari) `kelompok` kontrol.
 
 Untuk melihat apakah perbedaan tersebut secara statistik signifikan, kita perlu menghitung nilai-*P*. Nilai tersebut kita peroleh dengan menggunakan statistik uji $F$. Dengan menggunakan distribusi $F$ seperti yang ditunjukkan pada @fig-dist-F-prepost, kita dapat menentukan nilai-*P*. Nilai-*P* tersebut merupakan luas daerah di sebelah kanan statistik uji $F$ yang kita hitung tersebut.
 
@@ -509,12 +510,17 @@ Penghitungan statistik uji $F$ dan nilai-*P* dapat kita lakukan dengan kode beri
 #| label: ankova-prepost
 #| code-fold: false
 
-sampel_prepost %>% 
+hasil_ankova_prepost <- sampel_prepost %>% 
   anova_test(tes_akhir ~ tes_awal + kelompok)
+
+F_kelompok_prepost <- hasil_ankova_prepost[[4]][2]
+P_kelompok_prepost <- hasil_ankova_prepost[[5]][2]
+
+print(hasil_ankova_prepost)
 
 ```
 
-Karena yang ingin kita ketahui adalah pengaruh dari `kelompok`, kita perlu mencermati nilai $F$ dan *P* pada baris kelompok. Dari perhitungan tersebut, kita mendapatkan $F\approx\text{28,407}$ dan nilai-P yang sangat kecil, yaitu sekitar $\text{1,41}\cdot 10^{-6}$.
+Karena yang ingin kita ketahui adalah pengaruh dari `kelompok`, kita perlu mencermati nilai $F$ dan *P* pada baris kelompok. Dari perhitungan tersebut, kita mendapatkan $F$ sekitar `round(F_kelompok_prepost, 2)` dan nilai-*P* yang sangat kecil, yaitu sekitar `r P_kelompok_prepost`.
 
 ## Pemeriksanaan Kondisi
 
@@ -631,14 +637,18 @@ sampel_prepost %>%
 
 ```
 
-Berdasarkan @fig-tes_awal-kelompok-bebas-prepost, kita dapat melihat bahwa skor `tes_awal` tidak berhubungan dengan `kelompok`. Hal ini dikonfirmasi oleh model berikut bahwa nilai-*P* dari `kelompok` cukup besar, yaitu 0,442. Sehingga hubungannya tidak signifikan.
+Berdasarkan @fig-tes_awal-kelompok-bebas-prepost, kita dapat melihat bahwa skor `tes_awal` tidak berhubungan dengan `kelompok`. Hal ini dikonfirmasi oleh model berikut bahwa nilai-*P* dari `kelompok` cukup besar.
 
 ```{r}
 #| label: uji-bebas-kov-var-bebas-prepost
 
 model_tak_prepost <- lm(tes_awal ~ kelompok, data = sampel_prepost)
-summary(model_tak_prepost)
+P_tak_prepost <- anova_test(model_tak_prepost)[[5]]
+
+anova_test(model_tak_prepost)
 ```
+
+Nilai-P yang besarnya kurang lebih `r round(P_tak_prepost, 3)` tersebut menunjukkan bahwa asumsi tentang kebebasan `tes_awal` terhadap `kelompok` tidak ditolak. Artinya, kita masih dapat mengasumsikan bahwa kedua variabel tersebut bebas satu sama lain.
 
 ### Linearitas Kovariat dan Variabel Terikat
 
@@ -826,17 +836,189 @@ Berdasarkan @fig-diagram-pencar-tes_awal-tes_akhir-kelompok-prepost, kita dapat 
 #| label: anova-interaksi-prepost
 #| code-fold: false
 
-sampel_prepost %>% 
+anova_kesejajaran_prepost <- sampel_prepost %>% 
   anova_test(tes_akhir ~ kelompok*tes_awal)
+P_kesejajaran_inter_prepost <- anova_kesejajaran_prepost[[5]][3]
+
+print(anova_kesejajaran_prepost)
 ```
 
-Berdasarkan uji ANOVA tersebut, kita mendapatkan nilai-*P* yang cukup besar dari pengaruh interaksi antara `tes_awal` dan `kelompok`. Nilai-*P* tersebut kurang lebih 0,756. Hal ini memperkuat pengamatan visual kita terhadap @fig-diagram-pencar-tes_awal-tes_akhir-kelompok-prepost bahwa garis regresinya kurang lebih sejajar.
+Berdasarkan uji ANOVA tersebut, kita mendapatkan nilai-*P* yang cukup besar dari pengaruh interaksi antara `tes_awal` dan `kelompok`. Nilai-*P* tersebut kurang lebih `r round(P_kesejajaran_inter_prepost, 3)`. Hal ini memperkuat pengamatan visual kita terhadap @fig-diagram-pencar-tes_awal-tes_akhir-kelompok-prepost bahwa garis regresinya kurang lebih sejajar.
 
 Karena data `sampel_prepost` dan modelnya memenuhi kondisi-kondisi ANKOVA, kita dapat menginterpretasi hasil pada @sec-model-stat-p.
 
 ## Kesimpulan dan Interpretasi
 
 Pada @sec-model-stat-p, kita mendapatkan nilai-*P* yang sangat kecil, yaitu sekitar $\text{1,41}\cdot 10^{-6}$. Nilai ini lebih kecil dari $\alpha=\text{0,05}$. Kita tolak hipotesis nol. Jadi, dengan mempertimbangkan `tes_awal` sebagai kovariat, terdapat cukup bukti untuk mendukung klaim bahwa rerata `tes_akhir` pada `kelompok` eksperimen berbeda dengan `kelompok` kontrol.
+
+## Rangkuman Penggunaan ANKOVA
+
+Untuk menggunakan ANKOVA, kita langsung menentukan model datanya. Model yang dapat digunakan adalah model yang ditunjukkan pada @eq-ancova-eks-semu atau @eq-ancova-alt-eks-semu. Dari model tersebut, kita mendapat galat untuk setiap observasi pada tiap-tiap kategori atau kelompoknya. Galat itu selanjutnya kita gunakan untuk memeriksa kondisi-kondisi ANKOVA apakah terpenuhi atau tidak, khususnya kondisi normalitas dan homogenitas variansi. Kita juga perlu memeriksa kondisi-kondisi ANKOVA lainnya, yaitu bebas tidaknya observasi-observasi dalam sampel, bebas tidaknya kovariat terhadap variabel bebas, linearitas hubungan antara kovariat dan variabel terikat, dan kesejajaran model linear pada setiap kategori.
+
+Jika kondisi-kondisi tersebut terpenuhi, kita dapat menginterpretasi hasil ANOVA yang telah kita lakukan. Jika kita mendapatkan nilai-*P* yang sangat kecil (kurang dari tingkat signifikansi), kita tolak hipotesis nol. Jika sebaliknya, kita gagal menolak hipotesis nol.
+
+# Membandingkan Model
+
+Kita telah melakukan dua metode statistik yang berbeda, tetapi digunakan untuk menganalisis data yang sama. Meskipun datanya sama, jenis pertanyaan yang dijawab oleh kedua metode tersebut berbeda. Uji $t$ yang telah kita lakukan pada @sec-uji-t-prepost bertujuan untuk menjawab pertanyaan yang berfokus pada peningkatan nilai pada kategori/kelompok yang berbeda. ANKOVA yang kita lakukan pada @sec-ankova-prepost menjawab pertanyaan tentang perbedaan atau kesamaan rerata variabel terikat ketika kita mempertimbangkan kovariatnya.
+
+Sekarang, kita modelkan data `sampel_prepost` dengan menggunakan model yang ditunjukkan pada @eq-t-eks-semu, yaitu model yang kita gunakan ketika menggunakan uji $t$. Model tersebut dapat ditentukan dengan kode seperti berikut.
+
+```{r}
+#| label: model-uji-t-prepost
+#| code-fold: false
+
+model_t_prepost <- lm(d ~ kelompok, data = sampel_prepost)
+model_t_prepost
+
+```
+
+Untuk lebih memahami model tersebut, kita dapat memvisualisasikannya seperti pada @fig-model-t-prepost.
+
+```{r}
+#| label: fig-model-t-prepost
+#| fig-cap: Visualisasi model linear yang digunakan dalam uji $t$.
+#| fig-asp: 0.5625
+
+data_model_t_prepost <- augment(model_t_prepost) %>% 
+  select(1:4) %>% 
+  mutate(rerata_kelompok = if_else(kelompok == "eksperimen",
+                                   10.412 + 5.463,
+                                   10.412))
+data_model_t_prepost <- cbind(data_model_t_prepost,
+                              select(sampel_prepost, tes_awal, tes_akhir))
+data_model_t_prepost %>% 
+  ggplot(aes(x = tes_akhir, y = d,
+         color = kelompok)) +
+  geom_segment(aes(x = tes_akhir,
+                   y = d,
+                   xend = tes_akhir,
+                   yend = .fitted),
+               alpha = 0.4) +
+  geom_segment(x = 51, y = 15.875,
+               xend = 100, yend = 15.875,
+               col = "black",
+               linewidth = 1) +
+  geom_segment(x = 43, y = 10.412,
+               xend = 91, yend = 10.412,
+               col = "black",
+               linewidth = 1) +
+  geom_point(size = 3) +
+  theme_bw() +
+  scale_color_brewer(palette = "Dark2") +
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+```
+
+Galat pada @fig-model-t-prepost tersebut direpresentasikan sebagai panjang tiap-tiap ruas garis yang menghubungkan titik dengan modelnya (garis lurus horizontal). Bagaimana dengan galat dari model ANKOVA yang telah kita lakukan?
+
+Mari kita lihat (sekali lagi) model linear dari ANKOVA! Model ini telah kita tentukan pada @sec-model-stat-p.
+
+```{r}
+model_ankova_prepost
+```
+
+Untuk lebih memahami model tersebut, kita dapat memvisualisasikannya. Perhatikan @fig-model-ankova-prepost.
+
+```{r}
+#| label: fig-model-ankova-prepost
+#| fig-cap: Visualisasi model linear yang digunakan dalam ANKOVA.
+#| fig-asp: 0.5625
+
+data_model_ankova_prepost %>% 
+  ggplot() +
+  geom_segment(aes(x = tes_awal,
+                   y = tes_akhir,
+                   xend = tes_awal,
+                   yend = .fitted,
+                   color = kelompok),
+               alpha = 0.4) +
+  geom_function(fun = function(x) 1.149*x + 2.326,
+                xlim = c(34, 79),
+                linewidth = 1) +
+  geom_function(fun = function(x) 1.149*x + 2.326 + 5.186,
+                xlim = c(40, 79),
+                linewidth = 1) +
+  geom_point(aes(x = tes_awal, y = tes_akhir,
+         color = kelompok),
+         size = 3) +
+  theme_bw() +
+  scale_color_brewer(palette = "Dark2") +
+  theme(legend.position = "bottom")
+```
+
+Pada @fig-model-ankova-prepost tersebut, galat model ANKOVA-nya direpresentasikan sebagai panjang tiap-tiap ruas garis yang menghubungkan titik dengan modelnya. Bagaimana galat-galat model ANKOVA jika dibandingkan dengan uji $t$?
+
+Untuk membandingkan galat kedua model tersebut, kita perlu mengamatinya pada skala yang sama. Selanjutnya, kita bandingkan galat kedua model tersebut pada skala yang sama. Perhatikan @fig-galat-dua-model-prepost.
+
+```{r}
+#| label: fig-galat-dua-model-prepost
+#| fig-cap: Galat-galat pada model yang digunakan dalam ANKOVA dan uji $t$, digambar pada skala yang sama.
+#| fig-asp: 0.5625
+
+data_model_t_prepost2 <- data_model_t_prepost %>% 
+  select(tes_awal, tes_akhir, d, kelompok,
+         .fitted, .resid) %>% 
+  mutate(metode = rep("uji t", 66))
+data_model_ankova_prepost2 <- data_model_ankova_prepost %>% 
+  mutate(d = tes_akhir - tes_awal,
+         metode = rep("ANKOVA", 66)) %>% 
+  select(tes_awal, tes_akhir, d, kelompok,
+         .fitted, .resid, metode)
+data_model_prepost2 <- rbind(data_model_t_prepost2,
+                             data_model_ankova_prepost2)
+
+data_model_prepost2 %>% 
+  ggplot(aes(x = tes_akhir, y = .resid,
+             color = kelompok)) +
+  geom_segment(aes(x = tes_akhir, y = .resid,
+                   xend = tes_akhir, yend = 0),
+               alpha = 0.6) +
+  geom_hline(yintercept = 0,
+             linewidth = 1) +
+  geom_point(size = 3) +
+  facet_grid(metode~.) +
+  theme_bw() +
+  scale_color_brewer(palette = "Dark2") +
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+```
+
+Meskipun telah digambar pada skala yang sama, kita masih sulit untuk membandingkan galat-galat dari kedua model tersebut. Untuk itu, berikutnya kita dapat menghitung jumlah kuadrat galatnya pada tiap-tiap metode. Berikut ini adalah kode untuk menghitung jumlah kuadrat galat pada uji $t$.
+
+```{r}
+#| label: aov-model-t-prepost
+#| code-fold: false
+
+SSE_t_prepost <- data_model_t_prepost %>%
+  mutate(kuadrat_galat = .resid^2) %>%
+  summarise(SSE = sum(kuadrat_galat))
+
+SSE_t_num_prepost <- as.numeric(SSE_t_prepost[1,1])
+print(SSE_t_num_prepost)
+```
+
+Berdasarkan hasil di atas, kita dapat melihat bahwa jumlah kuadrat galat dari model linear yang digunakan dalam uji $t$ adalah sekitar `r round(SSE_t_num_prepost, 2)`.
+
+Kode berikut kita gunakan untuk menghitung jumlah kuadrat galat dari ANKOVA.
+
+```{r}
+#| code-fold: false
+
+SSE_ankova_prepost <- data_model_ankova_prepost %>% 
+  mutate(kuadrat_galat = .resid^2) %>% 
+  summarise(SSE = sum(kuadrat_galat))
+
+SSE_ankova_num_prepost <- as.numeric(SSE_ankova_prepost[1,1])
+print(SSE_ankova_num_prepost)
+```
+
+Berdasarkan perhitungan di atas, kita mendapatkan jumlah kuadrat galat dari model ankova yang kita gunakan adalah sekitar `r round(SSE_ankova_num_prepost, 2)`.
+
+Berdasarkan analisis jumlah kuadrat galat, kita mendapatkan bahwa jumlah kuadrat galat dari model ANKOVA lebih kecil daripada uji $t$. Dengan demikian, ANKOVA lebih baik dibandingkan dengan uji $t$ jika dilihat dari jumlah kuadrat galatnya.
 
 # Daftar Rujukan
 
