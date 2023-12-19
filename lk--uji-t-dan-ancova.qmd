@@ -489,18 +489,59 @@ Kita dapat membuat model untuk data sampel kita dengan kode seperti berikut.
 #| code-fold: false
 
 # Pelevelan ulang variabel `kelompok` agar modelnya menggunakan
-# kelompok kontrol sebagai baseline-nya.
+# kelompok kontrol sebagai garis dasarnya.
 sampel_prepost <- sampel_prepost %>% 
   mutate(kelompok = fct_relevel(kelompok, "kontrol", "eksperimen"))
 
 # Membuat model
 model_ankova_prepost <- lm(tes_akhir ~ tes_awal + kelompok,
                            data = sampel_prepost)
+
+# Menyimpan koefisien-koefisiennya
+koef_konstanta_prepost <- as.numeric(model_ankova_prepost[[1]][1])
+koef_tes_awal_prepost <- as.numeric(model_ankova_prepost[[1]][2])
 koef_eks_prepost <- as.numeric(model_ankova_prepost[[1]][3])
-model_ankova_prepost
+
+# Menampilkan modelnya
+print(model_ankova_prepost)
 ```
 
 Kita dapat memaknai model tersebut sebagai berikut: Jika skor `tes_awal` nilainya konstan, skor `tes_akhir` pada `kelompok` eksperimen nilainya `r round(koef_eks_prepost, 3)` lebih besar dari `kelompok` kontrol. Dengan demikian, model tersebut menunjukkan bahwa secara rata-rata skor `tes_akhir` pada `kelompok` eksperimen berbeda dari (atau secara spesifik lebih besar dari) `kelompok` kontrol.
+
+::: callout-note
+### Membaca Model {.unnumbered .unlisted}
+
+Model linear yang kita peroleh dari perhitungan sebelumnya menampilkan informasi tentang koefisien, yaitu perpotongan sumbu-$y$ (`Intercept`), `tes_awal`, dan `kelompokeksperimen`. Apa makna ketiga informasi tersebut? Mengapa hanya koefisien `kelompokeksperimen` yang ditampilkan? Bagaimana dengan koefisien `kelompokkontrol`?
+
+Koefiesien-koefisien yang ditampilkan dalam model tersebut adalah koefisien dari kovariat, variabel bebas, dan konstantanya untuk @eq-ancova-eks-semu. Koefisien dari kovariat `tes_awal` adalah `r round(koef_tes_awal_prepost, 3)`, koefisien dari `kelompok` eksperimen adalah `r round(koef_eks_prepost, 3)`, dan konstantanya adalah `r round(koef_konstanta_prepost, 3)`. Koefisien untuk `kelompok` kontrol tidak ditampilkan karena kelompok ini dijadikan garis dasar sehingga koefisiennya nol.
+
+Dengan demikian, model ANKOVA yang kita peroleh dapat juga dinyatakan seperti berikut.
+
+$$
+\begin{align*}
+\textbf{kelompok eksperimen:} &&
+\text{tes_akhir}_i &= \text{2,326} + \text{1,149}\text{ tes_awal}_i + \text{5,186} + e_i \\
+\textbf{kelompok kontrol:} &&
+\text{tes_akhir}_i &= \text{2,326} + \text{1,149}\text{ tes_awal}_i + e_i \\
+\end{align*}
+$$
+
+Mari kita gunakan model tersebut. Berdasarkan data `sampel_prepost`, peserta didik dengan `id` J-4 berada dalam `kelompok` eksperimen, memiliki skor `tes_awal` 76, dan skor `tes_akhir`-nya 95. Dari informasi tersebut, kita dapat menuliskannya seperti berikut.
+
+$$
+95=\text{2,326}+\text{1,149}(76) + \text{5,186} + e_i
+$$
+
+Dengan demikian, galat model untuk anak tersebut adalah $e\approx\text{0,164}$.
+
+Peserta didik dengan `id` K-28 berada dalam `kelompok` kontrol, memiliki skor `tes_awal` 48, dan skor `tes_akhir`-nya 57. Informasi ini dapat kita nyatakan ke dalam model seperti berikut.
+
+$$
+\text{57} = \text{2,326} + \text{1,149}(48) + e_i
+$$
+
+Dari persamaan tersebut, kita peroleh galat untuk K-28 tersebut adalah $e\approx-\text{0,478}$.
+:::
 
 Untuk melihat apakah perbedaan tersebut secara statistik signifikan, kita perlu menghitung nilai-*P*. Nilai tersebut kita peroleh dengan menggunakan statistik uji $F$. Dengan menggunakan distribusi $F$ seperti yang ditunjukkan pada @fig-dist-F-prepost, kita dapat menentukan nilai-*P*. Nilai-*P* tersebut merupakan luas daerah di sebelah kanan statistik uji $F$ yang kita hitung tersebut.
 
