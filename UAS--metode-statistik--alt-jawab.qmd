@@ -1,0 +1,304 @@
+---
+title: "STAT503 Metode Statistik"
+subtitle: "Ujian Akhir Semester (UAS): Alternatif Penyelesaian"
+date: 2024-01-03
+format:
+  pdf:
+    number-sections: true
+    papersize: a4
+    geometry: 
+      - top = 30mm
+      - left = 30mm
+      - bottom = 30mm
+      - right = 30mm
+crossref: 
+  fig-title: Gambar
+  fig-prefix: Gambar
+  tbl-title: Tabel
+  tbl-prefix: Tabel
+  sec-prefix: Bagian
+---
+
+```{r}
+#| label: pengaturan
+#| include: false
+
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(knitr)
+library(kableExtra)
+```
+
+# Motivasi Belajar
+
+Seorang guru ingin mengetahui apakah secara rata-rata motivasi belajar peserta didiknya meningkat setelah mereka mengikuti pembelajarannya. Untuk itu, guru tersebut menghitung selisih motivasi belajar setiap peserta didik dengan mengurangi motivasi awal dengan motivasi akhirnya. Statistik deskriptif selisih motivasi tersebut, yaitu `d`, disajikan pada @tbl-stat-deskriptif-selisih-motivasi.
+
+| Variabel | $n$ | $\bar{x}$ | $s$  |
+|:--------:|:---:|:---------:|:----:|
+|   `d`    | 58  |   -1,1    | 5,01 |
+
+: Statistik deskriptif selisih motivasi belajar peserta didik {#tbl-stat-deskriptif-selisih-motivasi}
+
+Berdasarkan @tbl-stat-deskriptif-selisih-motivasi, guru tersebut menduga bahwa terjadi peningkatan motivasi belajar peserta didiknya.
+
+1.  Untuk menguji klaim guru tersebut, tuliskan hipotesis nol dan alternatifnya.
+
+2.  Anggap bahwa sampel guru tersebut bebas. Karena sampelnya besar, kita langsung dapat menggunakan uji $t$. Dengan menggunakan uji ini, berapakah nilai-*P* yang didapatkan?
+
+3.  Tuliskan kesimpulan dan interpretasi uji $t$ tersebut!
+
+------------------------------------------------------------------------
+
+## Alternatif Jawaban {.unnumbered}
+
+1.  Hipotesis nolnya adalah $H_0$: Tidak terjadi peningkatan motivasi belajar, yaitu $\mu_d=0$. Hipotesis alternatifnya adalah terjadi peningkatan motivasi belajar, yaitu $\mu_d<0$.
+
+2.  Untuk menentukan nilai-*P*, pertama kita hitung statistik ujinya dengan kode berikut.
+
+    ```{r}
+    n_motiv <- 58           # <1>
+    rerata_d_motiv <- -1.1  # <1>
+    s_d_motiv <- 5.01       # <1>
+    SE_d_motiv <- s_d_motiv / sqrt(n_motiv)  # <2>
+    stat_uji_t_motiv <- (rerata_d_motiv - 0) / SE_d_motiv  # <3>
+    print(stat_uji_t_motiv) # <4>
+    ```
+
+    1.  Membuat variabel-variabel `n_motiv`, `rerata_d_motiv`, dan `s_d_motiv` yang secara berturut-turut untuk menyimpan nilai $n$, $\bar{x}$, dan $s$ pada @tbl-stat-deskriptif-selisih-motivasi.
+    2.  Menghitung $SE$ dari variabel `d` dengan rumus $SE=\frac{s}{\sqrt{n}}$.
+    3.  Menghitung statistik uji dengan rumus $t=\frac{\bar{x}-\mu}{SE}$. Karena hipotesis nol diasumsikan benar, $\mu$ bernilai 0.
+    4.  Cetak hasil perhitungan statistik uji $t$.
+
+    Kita gunakan distribusi-$t$ dengan $\text{df}=n-1=58-1=57$. Karena uji hipotesis yang kita lakukan adalah uji ekor kiri, nilai-*P* uji ini dapat ditentukan sebagai berikut.
+
+    ```{r}
+    df_motiv <- n_motiv - 1          # <1>
+    P_motiv <- pt(stat_uji_t_motiv,  # <2>
+       df = df_motiv,                # <2>
+       lower.tail = TRUE)            # <2>
+    print(P_motiv)                   # <3>
+    ```
+
+    1.  Menghitung derajat bebas dan menyimpan nilainya sebagai `df_motiv`.
+    2.  Menentukan nilai-*P*, yaitu luas daerah di sebelah kiri (`lower.tail = TRUE`) $t$ yang senilai `stat_uji_t_motiv` pada distribusi-$t$ yang memiliki derajat bebas `df_motiv`.
+    3.  Tampilkan hasil perhitungan nilai-*P*.
+
+3.  Dengan tingkat signifikansi $\alpha=\text{0,05}$, kita tolak hipotesis nol. Dengan demikian, terdapat cukup bukti untuk mendukung dugaan guru tersebut bahwa terjadi peningkatan motivasi belajar peserta didiknya.
+
+# Tinggi Badan Pemain Sepak Bola
+
+Seorang penikmat sepak bola menduga bahwa pemain sepak bola pada posisi penyerang, gelandang, pemain belakang, dan penjaga gawang memiliki tinggi badan yang reratanya sama. (a) Ujilah dugaan tersebut dengan data `sampel_pemain_bola`. Sampel tersebut merupakan sampel acak sederhana. (b) Jika dugaan tersebut ditolak, carilah rerata mana yang berbeda.
+
+```{r}
+#| label: data-sampel-pemain-bola
+
+sampel_pemain_bola <- tribble(
+  ~posisi,	          ~tinggi_badan,
+  "Penjaga Gawang",	  188,
+  "Penjaga Gawang",	  190,
+  "Penjaga Gawang",	  190,
+  "Penjaga Gawang",	  190,
+  "Penjaga Gawang",	  185,
+  "Penjaga Gawang",	  191,
+  "Penjaga Gawang",	  188,
+  "Penjaga Gawang",	  196,
+  "Pemain Belakang",	190,
+  "Pemain Belakang",	185,
+  "Pemain Belakang",	189,
+  "Pemain Belakang",	172,
+  "Pemain Belakang",	184,
+  "Pemain Belakang",	184,
+  "Pemain Belakang",	191,
+  "Pemain Belakang",	186,
+  "Pemain Belakang",	179,
+  "Pemain Belakang",	186,
+  "Gelandang",      	183,
+  "Gelandang",	      183,
+  "Gelandang",	      173,
+  "Gelandang",	      174,
+  "Gelandang",	      174,
+  "Gelandang",	      181,
+  "Gelandang",	      181,
+  "Gelandang",	      173,
+  "Gelandang",	      186,
+  "Gelandang",	      176,
+  "Penyerang",	      187,
+  "Penyerang",	      181,
+  "Penyerang",	      181,
+  "Penyerang",	      181,
+  "Penyerang",	      189,
+  "Penyerang",	      189,
+  "Penyerang",	      181,
+  "Penyerang",	      184,
+  "Penyerang",	      172
+)
+
+```
+
+------------------------------------------------------------------------
+
+## Alternatif Jawaban
+
+### Pemeriksaan Kondisi
+
+Seperti yang dinyatakan di soal, sampel tersebut merupakan sampel acak sederhana. Dengan demikian, kondisi bebas terpenuhi. Kondisi berikutnya yang perlu diuji adalah normalitas data sampel pada tiap-tiap kategorinya. Untuk mengujinya, kita dapat menggunakan diagram peluang normal. Diagram ini ditunjukkan pada @fig-dpn-pemain-bola.
+
+```{r}
+#| label: fig-dpn-pemain-bola
+#| fig-cap: Diagram peluang normal `tinggi_badan` pemain sepak bola pada tiap-tiap `posisi`-nya.
+#| fig-asp: 0.5625
+
+sampel_pemain_bola %>%                     # <1> 
+  ggqqplot(x = "tinggi_badan",             # <2>
+           color = "posisi",               # <2>
+           ggtheme = theme_bw()) +         # <2>
+  scale_color_brewer(palette = "Dark2") +  # <3>
+  theme(legend.position = "bottom")        # <4>
+```
+
+1.  Memanggil data `sampel_pemain_bola`, dan kemudian,
+2.  berdasarkan data tersebut dibuat diagram peluang normal terhadap variabel `tinggi_badan` untuk setiap `posisi`-nya.
+3.  Menggunakan palet warna `Dark2`.
+4.  Meletakkan legenda di bawah.
+
+Berdasarkan @fig-dpn-pemain-bola, kita dapat mengasumsikan bahwa `tinggi_badan` tersebut berasal dari populasi yang berdistribusi normal. Asumsi ini tidak ditolak dengan uji Shapiro-Wilk yang hasilnya disajikan pada @tbl-shapiro-pemain-bola karena uji tersebut mendapatkan nilai-P yang cukup besar pada setiap `posisi`-nya.
+
+```{r}
+#| label: tbl-shapiro-pemain-bola
+#| tbl-cap: Hasil normalitas dengan uji Shapiro-Wilk.
+
+sampel_pemain_bola %>%                             # <1>
+  group_by(posisi) %>%                             # <2>
+  shapiro_test(tinggi_badan) %>%                   # <3>
+  kbl(linesep = "",                                # <4>
+      booktabs = TRUE) %>%                         # <4>
+  kable_styling(latex_options = c("striped",       # <5>
+                                  "condensed"),    # <5>
+                full_width = FALSE)                # <5>
+
+```
+
+Selanjutnya kita lihat variansi `tinggi_badan` pada tiap-tiap `posisi`-nya. Hal ini dapat kita lakukan dengan membuat boxplot.
+
+```{r}
+#| label: fig-boxplot_tinggi_badan_pemain_bola
+#| fig-cap: Distribusi `tinggi_badan` pemain sepak bola pada tiap-tiap `posisi`-nya.
+#| fig-asp: 0.5625
+
+sampel_pemain_bola %>% 
+  ggplot(aes(x = posisi,
+             y = tinggi_badan,
+             fill = posisi)) +
+  geom_boxplot(alpha = .5) +
+  theme_bw() +
+  scale_fill_brewer(palette = "Dark2") +
+  theme(legend.position = "none")
+
+```
+
+Berdasarkan boxplot yang ditampilkan pada @fig-boxplot_tinggi_badan_pemain_bola, kita melihat variansinya agak berbeda. Kita pastikan hal ini dengan menggunakan uji Levene.
+
+```{r}
+#| warning: false
+#| label: tbl-levene-pemain-bola
+#| tbl-cap: Hasil uji Levene terhadap `tinggi_badan` pemain sepak bola pada tiap-tiap `posisi`-nya.
+
+sampel_pemain_bola %>% 
+  levene_test(tinggi_badan ~ posisi) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(latex_options = c("striped",
+                                  "condensed"),
+                full_width = FALSE)
+```
+
+Berdasarkan hasil uji Levene yang disajikan pada @tbl-levene-pemain-bola, kita gagal menolak asumsi homogenitas variansi. Dengan demikian, kita dapat mengasumsikan bahwa variansi `tinggi_badan` pemain sepak bola pada setiap `posisi`-nya homogen.
+
+Kita telah menunjukkan bahwa data `sampel_pemain_bola` memenuhi kondisi-kondisi ANOVA. Untuk itu, selanjutnya kita lakukan uji tersebut.
+
+### Hipotesis Nol dan Alternatifnya
+
+Hipotesis nol dan hipotesis alternatif uji ANOVA yang akan kita lakukan adalah sebagai berikut.
+
+-   $H_0$: Rerata `tinggi_badan` pemain sepak bola pada setiap `posisi`-nya sama, yaitu $\mu_1=\mu_2=\mu_3=\mu_4$ dengan $\mu_1$, $\mu_2$, $\mu_3$, dan $\mu_4$ secara berturut-turut adalah rerata `tinggi_badan` pemain sepak bola pada `posisi` penjaga gawang, pemain belakang, gelandang, dan penyerang.
+
+-   $H_A$: Terdapat paling tidak sepasang rerata yang berbeda.
+
+### Tingkat Signifikansi
+
+Kita gunakan tingkat signifikansi $\alpha=\text{0,05}$.
+
+### Variabilitas Statistik
+
+Data sampel yang kita miliki, yaitu `sampel_pemain_bola`, berukuran $n=37$ dan memiliki $k=4$ kategori. Dengan demikian, statistik $F$ sampel-sampelnya mengikuti distribusi-$F$ dengan derajat bebas $\text{df}_1=4-1=3$ dan $\text{df}_2=37-4=33$. Distribusi $F$ tersebut ditunjukkan pada @fig-dist-F-pemain-bola.
+
+```{r}
+#| label: fig-dist-F-pemain-bola
+#| fig-cap: Distribusi-$F$ dengan $\text{df}_1=3$ dan $\text{df}_2=33$.
+#| fig-asp: 0.5625
+
+k_pemain_bola <- sampel_pemain_bola %>% 
+  distinct(posisi) %>% 
+  nrow()
+n_pemain_bola <- sampel_pemain_bola %>% 
+  nrow()
+df1_pemain_bola <- k_pemain_bola - 1
+df2_pemain_bola <- n_pemain_bola - k_pemain_bola
+
+data.frame(x = c(0, 10)) %>% 
+  ggplot(aes(x = x)) +
+  geom_function(fun = df,
+                args = list(df1 = df1_pemain_bola,
+                            df2 = df2_pemain_bola),
+                linewidth = 1) +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(x = "F")
+```
+
+### Statistik Uji dan Nilai-*P*
+
+Kita selanjutnya hitung statistik uji $F$ dan nilai-*P* untuk data `sampel_pemain_bola`. Hasil disajikan pada
+
+```{r}
+#| label: tbl-anova-pemain-bola
+#| tbl-cap: Statistik uji $F$ dan nilai-P dari uji ANOVA
+
+hasil_anova_pemain_bola <- sampel_pemain_bola %>% 
+  anova_test(formula = tinggi_badan ~ posisi)
+hasil_anova_pemain_bola %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(latex_options = c("striped",
+                                  "condensed"),
+                full_width = FALSE)
+```
+
+Berdasarkan @tbl-anova-pemain-bola, kita dapatkan $F$ yang kurang lebih sebesar `r round(hasil_anova_pemain_bola[[4]], 3)` dan nilai-*P* yang kurang lebih senilai `r round(hasil_anova_pemain_bola[[5]], 5)`.
+
+### Kesimpulan dan Interpretasi
+
+Karena kita mendapatkan nilai-*P* yang kurang dari $\alpha=\text{0,05}$, kita tolak hipotesis nol. Dengan demikian, terdapat cukup bukti untuk menolak dugaan penikmat sepak bola tersebut.
+
+### Uji Hipotesis Pasca-ANOVA
+
+Sekarang kita akan mengidentifikasi rerata `posisi` mana saja yang berbeda. Untuk melakukannya, kita gunakan uji perbandingan berganda Tukey. Hasil uji ini disajikan pada @tbl-Tukey-pemain-bola.
+
+```{r}
+#| label: tbl-Tukey-pemain-bola
+#| tbl-cap: Hasil uji perbandingan berganda Tukey terhadap data `sampel_pemain_bola`.
+
+hasil_tukey_pemain_bola <- sampel_pemain_bola %>% 
+  tukey_hsd(formula = tinggi_badan ~ posisi)
+hasil_tukey_pemain_bola %>% 
+  select(-term, -null.value, -p.adj.signif) %>% 
+  kbl(linesep = "",
+      booktabs = TRUE) %>% 
+  kable_styling(latex_options = c("striped",
+                                  "condensed"))
+```
+
+Berdasarkan @tbl-Tukey-pemain-bola, kita mendapatkan tiga pasang rerata `tinggi_badan` yang perbedaannya signifikan. Ketiga pasang tersebut adalah gelandang dan pemain belakang, gelandang dan penjaga gawang, serta penjaga gawang dan penyerang.
