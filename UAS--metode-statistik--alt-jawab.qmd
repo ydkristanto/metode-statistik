@@ -179,6 +179,12 @@ sampel_pemain_bola %>%                             # <1>
 
 ```
 
+1.  Memanggil objek `sampel_pemain_bola`, dan kemudian
+2.  dikelompokkan berdasarkan variabel `posisi`, dan kemudian
+3.  dilakukan uji Shapiro-Wilk terhadap variabel `tinggi_badan`, dan kemudian
+4.  hasilnya dijadikan sebuah tabel sederhana, dan kemudian
+5.  tabel hasilnya diatur agar berjalur dan ringkas, serta lebarnya tidak penuh.
+
 Selanjutnya kita lihat variansi `tinggi_badan` pada tiap-tiap `posisi`-nya. Hal ini dapat kita lakukan dengan membuat boxplot.
 
 ```{r}
@@ -186,8 +192,8 @@ Selanjutnya kita lihat variansi `tinggi_badan` pada tiap-tiap `posisi`-nya. Hal 
 #| fig-cap: Distribusi `tinggi_badan` pemain sepak bola pada tiap-tiap `posisi`-nya.
 #| fig-asp: 0.5625
 
-sampel_pemain_bola %>% 
-  ggplot(aes(x = posisi,
+sampel_pemain_bola %>%          # <1>
+  ggplot(aes(x = posisi,        # <2>
              y = tinggi_badan,
              fill = posisi)) +
   geom_boxplot(alpha = .5) +
@@ -197,6 +203,9 @@ sampel_pemain_bola %>%
 
 ```
 
+1.  Memanggil objek `sampel_pemain_bola`, dan kemudian
+2.  datanya dijadikan boxplot dengan x menyatakan `posisi` dan y menyatakan `tinggi_badan`, serta warnanya menyatakan `posisi`.
+
 Berdasarkan boxplot yang ditampilkan pada @fig-boxplot_tinggi_badan_pemain_bola, kita melihat variansinya agak berbeda. Kita pastikan hal ini dengan menggunakan uji Levene.
 
 ```{r}
@@ -204,14 +213,19 @@ Berdasarkan boxplot yang ditampilkan pada @fig-boxplot_tinggi_badan_pemain_bola,
 #| label: tbl-levene-pemain-bola
 #| tbl-cap: Hasil uji Levene terhadap `tinggi_badan` pemain sepak bola pada tiap-tiap `posisi`-nya.
 
-sampel_pemain_bola %>% 
-  levene_test(tinggi_badan ~ posisi) %>% 
-  kbl(linesep = "",
-      booktabs = TRUE) %>% 
-  kable_styling(latex_options = c("striped",
-                                  "condensed"),
-                full_width = FALSE)
+sampel_pemain_bola %>%                           # <1>
+  levene_test(tinggi_badan ~ posisi) %>%         # <2>
+  kbl(linesep = "",                              # <3>
+      booktabs = TRUE) %>%                       # <3>
+  kable_styling(latex_options = c("striped",     # <4>
+                                  "condensed"),  # <4>
+                full_width = FALSE)              # <4>
 ```
+
+1.  Panggil objek `sampel_pemain_bola`, dan kemudian
+2.  dilakukan uji Levene dengan variabel terikat `tinggi_badan` dan variabel bebas `posisi`, dan kemudian
+3.  hasilnya dijadikan tabel sederhana, dan kemudian
+4.  tabel hasilnya diatur lebih lanjut agar terbaca dengan mudah.
 
 Berdasarkan hasil uji Levene yang disajikan pada @tbl-levene-pemain-bola, kita gagal menolak asumsi homogenitas variansi. Dengan demikian, kita dapat mengasumsikan bahwa variansi `tinggi_badan` pemain sepak bola pada setiap `posisi`-nya homogen.
 
@@ -238,15 +252,15 @@ Data sampel yang kita miliki, yaitu `sampel_pemain_bola`, berukuran $n=37$ dan m
 #| fig-cap: Distribusi-$F$ dengan $\text{df}_1=3$ dan $\text{df}_2=33$.
 #| fig-asp: 0.5625
 
-k_pemain_bola <- sampel_pemain_bola %>% 
+k_pemain_bola <- sampel_pemain_bola %>%              # <1>
   distinct(posisi) %>% 
   nrow()
-n_pemain_bola <- sampel_pemain_bola %>% 
+n_pemain_bola <- sampel_pemain_bola %>%              # <2>
   nrow()
-df1_pemain_bola <- k_pemain_bola - 1
-df2_pemain_bola <- n_pemain_bola - k_pemain_bola
+df1_pemain_bola <- k_pemain_bola - 1                 # <3>
+df2_pemain_bola <- n_pemain_bola - k_pemain_bola     # <4>
 
-data.frame(x = c(0, 10)) %>% 
+data.frame(x = c(0, 10)) %>%                         # <5>
   ggplot(aes(x = x)) +
   geom_function(fun = df,
                 args = list(df1 = df1_pemain_bola,
@@ -259,6 +273,12 @@ data.frame(x = c(0, 10)) %>%
   labs(x = "F")
 ```
 
+1.  Menghitung banyaknya kategori dalam data.
+2.  Menghitung ukuran data sampel.
+3.  Menghitung $\text{df}_1$.
+4.  Menghitung $\text{df}_2$.
+5.  Menggambar distribusi-$F$ yang derajat-derajat bebasnya $\text{df}_1$ dan $\text{df}_2$.
+
 ### Statistik Uji dan Nilai-*P*
 
 Kita selanjutnya hitung statistik uji $F$ dan nilai-*P* untuk data `sampel_pemain_bola`. Hasil disajikan pada
@@ -267,15 +287,18 @@ Kita selanjutnya hitung statistik uji $F$ dan nilai-*P* untuk data `sampel_pemai
 #| label: tbl-anova-pemain-bola
 #| tbl-cap: Statistik uji $F$ dan nilai-P dari uji ANOVA
 
-hasil_anova_pemain_bola <- sampel_pemain_bola %>% 
+hasil_anova_pemain_bola <- sampel_pemain_bola %>%  # <1>
   anova_test(formula = tinggi_badan ~ posisi)
-hasil_anova_pemain_bola %>% 
+hasil_anova_pemain_bola %>%                        # <2>
   kbl(linesep = "",
       booktabs = TRUE) %>% 
   kable_styling(latex_options = c("striped",
                                   "condensed"),
                 full_width = FALSE)
 ```
+
+1.  Melakukan ANOVA terhadap `sampel_pemain_bola` dengan variabel terikat `tinggi_badan` dan variabel bebas `posisi`.
+2.  Menampilkan hasil uji ANOVA dengan menggunakan tabel.
 
 Berdasarkan @tbl-anova-pemain-bola, kita dapatkan $F$ yang kurang lebih sebesar `r round(hasil_anova_pemain_bola[[4]], 3)` dan nilai-*P* yang kurang lebih senilai `r round(hasil_anova_pemain_bola[[5]], 5)`.
 
@@ -291,14 +314,17 @@ Sekarang kita akan mengidentifikasi rerata `posisi` mana saja yang berbeda. Untu
 #| label: tbl-Tukey-pemain-bola
 #| tbl-cap: Hasil uji perbandingan berganda Tukey terhadap data `sampel_pemain_bola`.
 
-hasil_tukey_pemain_bola <- sampel_pemain_bola %>% 
+hasil_tukey_pemain_bola <- sampel_pemain_bola %>%  # <1>
   tukey_hsd(formula = tinggi_badan ~ posisi)
-hasil_tukey_pemain_bola %>% 
+hasil_tukey_pemain_bola %>%                        # <2>
   select(-term, -null.value, -p.adj.signif) %>% 
   kbl(linesep = "",
       booktabs = TRUE) %>% 
   kable_styling(latex_options = c("striped",
                                   "condensed"))
 ```
+
+1.  Melakukan uji perbandingan berganda Tukey terhadap data `sampel_pemain_bola` dengan variabel terikat `tinggi_badan` dan variabel bebas `posisi`.
+2.  Menampilkan hasil uji perbandingan berganda Tukey tetapi tidak menampilkan variabel-variabel `term`, `null.value`, dan `p.adj.signif`.
 
 Berdasarkan @tbl-Tukey-pemain-bola, kita mendapatkan tiga pasang rerata `tinggi_badan` yang perbedaannya signifikan. Ketiga pasang tersebut adalah gelandang dan pemain belakang, gelandang dan penjaga gawang, serta penjaga gawang dan penyerang.
