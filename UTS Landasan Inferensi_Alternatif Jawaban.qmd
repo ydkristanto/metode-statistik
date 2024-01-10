@@ -218,7 +218,17 @@ sk_matematis <- tibble(                       # <5>
 print(sk_matematis)                           # <6>
 ```
 
-1.  
+1.  Menghitung $z^\star$ dan menyimpan nilainya ke dalam objek `z_bintang`.
+
+2.  Menentukan pias galat dengan rumus $z^\star\cdot SE$.
+
+3.  Menentukan batas bawah selang kepercayaan, yaitu $\hat{p} - z^\star\cdot SE$.
+
+4.  Menentukan batas atas selang kepercayaan, yaitu yaitu $\hat{p} + z^\star\cdot SE$.
+
+5.  Membuat sebuah data untuk menyimpan batas-batas selang kepercayaan. Data tersebut dinamai dengan `sk_matematis`.
+
+6.  Menampilkan `sk_matematis`.
 
 Dengan demikian, selang kepercayaan yang kita peroleh adalah (`r round(sk_bawah_matematis *100, 2)`%, `r round(sk_atas_matematis * 100, 2)`%).
 
