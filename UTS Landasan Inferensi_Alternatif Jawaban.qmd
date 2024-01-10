@@ -20,13 +20,18 @@ crossref:
 
 ```{r}
 #| label: pengaturan
-#| include: false
+#| message: false
 
-library(tidyverse)
-library(knitr)
-library(infer)
-library(kableExtra)
+library(tidyverse)   # <1>
+library(infer)       # <2>
+library(knitr)       # <3>
+library(kableExtra)  # <4>
 ```
+
+1.  Metapaket yang memuat paket {dplyr} dan {ggplot2} yang dalam dokumen ini secara berturut-turut digunakan untuk mengolah data dan membuat diagram-diagram statistik.
+2.  Paket yang digunakan untuk melakukan inferensi dengan metode simulasi.
+3.  Dalam dokumen ini, paket {knitr} digunakan untuk membuat tabel sederhana.
+4.  Paket yang digunakan untuk mengatur tampilan tabel.
 
 # Soal: Video di Luar Ruangan
 
@@ -52,14 +57,17 @@ Berdasarkan informasi dalam soal, kita buat data `sampel_videoYt` dengan menggun
 
 ```{r}
 #| label: data-sampel
-#| echo: false
 
-sampel_videoYt <- data.frame(
-  id = 1:154,
-  LuarRuangan = c(rep("Ya", 45),
-                  rep("Tidak", 109))
-  )
+sampel_videoYt <- data.frame(         # <1>
+  id = 1:154,                         # <2>
+  LuarRuangan = c(rep("Ya", 45),      # <3>
+                  rep("Tidak", 109))  # <4>
+  )                                   # <4>
 ```
+
+1.  Membuat objek `sampel_videoYt` yang merupakan dataframe,
+2.  yang memiliki variabel pertama bernama `id` yang isinya bilangan bulat terurut dari 1 sampai 154,
+3.  dan variabel kedua bernama `LuarRuangan` yang berisi "Ya" sebanyak 45 dan "Tidak" sebanyak 109.
 
 @tbl-sampel-videoYt menyajikan beberapa baris (lima baris paling atas dan paling bawah) dalam data `sampel_videoYt`.
 
@@ -67,16 +75,21 @@ sampel_videoYt <- data.frame(
 #| label: tbl-sampel-videoYt
 #| tbl-cap: Beberapa baris dalam data `sampel_videoYt`.
 
-sampel_videoYt %>% 
-  slice(c(1:5, 150:154)) %>% 
-  kbl(linesep = "",
-      booktabs = TRUE) %>% 
-  kable_styling(bootstrap_options = c("striped",
-                                      "condensed"),
-                latex_options = c("striped",
-                                  "condensed"),
-                full_width = FALSE)
+sampel_videoYt %>%                                   # <1>
+  slice(c(1:5, 150:154)) %>%                         # <2>
+  kbl(linesep = "",                                  # <3>
+      booktabs = TRUE) %>%                           # <3>
+  kable_styling(bootstrap_options = c("striped",     # <4>
+                                      "condensed"),  # <4>
+                latex_options = c("striped",         # <4>
+                                  "condensed"),      # <4>
+                full_width = FALSE)                  # <4>
 ```
+
+1.  Memanggil objek `sampel_videoYt`, dan kemudian
+2.  dipilih baris-barisnya yang memiliki indeks 1 sampai 5 dan 150 sampai 154, dan kemudian
+3.  hasilnya dibuat tabel sederhana, dan kemudian
+4.  tabel hasilnya diatur agar berjalur dan ringkas, serta lebarnya tidak penuh.
 
 Visualisasi yang menunjukkan rasio video-video Youtube yang gambarnya diambil di luar ruangan ditunjukkan pada @fig-vis-video-yt.
 
@@ -99,7 +112,6 @@ sampel_videoYt %>%
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
         legend.position = "bottom")
-
 ```
 
 ## Memodelkan Variabilitas Statistik
@@ -110,14 +122,18 @@ Untuk memodelkan variabilitas statistik-statistiknya dengan menggunakan metode b
 #| label: dist-boot-yt-luar
 #| echo: false
 
-dist_boot_videoYt <- sampel_videoYt %>%
-  specify(response = LuarRuangan,
-          success = "Ya") %>%
-  generate(reps = 10000,
-           type = "bootstrap") %>%
-  calculate(stat = "prop")
-
+dist_boot_videoYt <- sampel_videoYt %>% # <1>
+  specify(response = LuarRuangan,       # <2>
+          success = "Ya") %>%           # <2>
+  generate(reps = 10000,                # <3>
+           type = "bootstrap") %>%      # <3>
+  calculate(stat = "prop")              # <4>
 ```
+
+1.  Membuat sebuah objek `dist_boot_videoYt` yang menyimpan hasil pemanggilan objek `sampel_videoYt`, dan kemudian
+2.  dilakukan spesifikasi dengan variabel respon (variabel terikat) `LuarRuangan` dan suksesnya ketika mendapatkan "Ya", dan kemudian
+3.  hasilnya digunakan untuk membuat 10000 sampel berjenis bootstrap, dan kemudian
+4.  hasil sampel-sampelnya dihitung proporsinya.
 
 @fig-dist-boot-yt-luar menunjukkan visualisasi distribusi bootstrap dan distribusi sampling dari model matematisnya.
 
@@ -126,11 +142,11 @@ dist_boot_videoYt <- sampel_videoYt %>%
 #| fig-cap: Visualisasi distribusi sampling hasil simulasi bootstrap dan model matematis kurva normal
 #| fig-asp: 0.5625
 
-mu <- 45/154
-SE <- sqrt(mu*(1-mu)/154)
+mu <- 45/154               # <1>
+SE <- sqrt(mu*(1-mu)/154)  # <2>
 
-dist_boot_videoYt %>%
-  ggplot(aes(x = stat)) +
+dist_boot_videoYt %>%      # <3>
+  ggplot(aes(x = stat)) +  # <4>
   geom_histogram(aes(y = after_stat(density)),
                  binwidth = 0.02,
                  col = "white") +
@@ -141,8 +157,12 @@ dist_boot_videoYt %>%
   theme(axis.title.y = element_blank(),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank())
-
 ```
+
+1.  Menghitung proporsi suksesnya, yaitu $\hat{p}$.
+2.  Menghitung pias galat atau $SE$ dengan rumus $SE=\sqrt{\frac{\hat{p}(1-\hat{p})}{n}}$.
+3.  Memanggil objek `dist_boot_videoYt`, dan kemudian
+4.  hasilnya dijadikan data untuk membuat diagram statistik yang berupa histogram dan kurva normal.
 
 ## Membuat Selang Kepercayaan
 
@@ -153,12 +173,17 @@ Selang kepercayaannya akan dibuat dengan menggunakan dua metode, yaitu metode bo
 Ujung-ujung selang kepercayaan persentil 95% dapat ditentukan dengan kode berikut.
 
 ```{r}
-sk_persentil <- dist_boot_videoYt %>% 
-  get_ci(level = .95)
-sk_bawah <- as.numeric(sk_persentil[1, 1])
-sk_atas <- as.numeric(sk_persentil[1, 2])
-print(sk_persentil)
+sk_persentil <- dist_boot_videoYt %>%        # <1>
+  get_ci(level = .95)                        # <2>
+sk_bawah <- as.numeric(sk_persentil[1, "lower_ci"])   # <3>
+sk_atas <- as.numeric(sk_persentil[1, "upper_ci"])    # <4>
+print(sk_persentil)                          # <5>
 ```
+
+1.  Membuat objek `sk_persentil` yang digunakan untuk menyimpan hasil dari pemanggilan objek `dist_boot_videoYt`, dan kemudian
+2.  hasilnya digunakan untuk membuat selangk kepercayaan dengan tingkat kepercayaan 95%.
+3.  Membuat objek `sk_bawah` yang merupakan nilai dari baris pertama dan kolom `lower_ci` dari `sk_persentil` agar hasilnya dapat digunakan lagi.
+4.  Membuat objek `sk_atas` yang merupakan nilai dari baris pertama dan kolom `upper_ci` dari `sk_persentil` agar hasilnya dapat digunakan lagi.
 
 Jadi, selang kepercayaan 95% yang kita peroleh dari metode bootstrap adalah (`r round(sk_bawah * 100, 2)`%, `r round(sk_atas * 100, 2)`%). Selang kepercayaan tersebut divisualisasikan pada @fig-sk-dist_boot.
 
@@ -167,28 +192,33 @@ Jadi, selang kepercayaan 95% yang kita peroleh dari metode bootstrap adalah (`r 
 #| fig-cap: Visualisasi selang kepercayaan persentil 95% yang diperoleh dari metode bootstrap.
 #| fig-asp: 0.5625
 
-visualise(dist_boot_videoYt) +
-  shade_confidence_interval(endpoints = sk_persentil,
-                            color = "#1b9e77") +
+visualise(dist_boot_videoYt) +                         # <1>
+  shade_confidence_interval(endpoints = sk_persentil,  # <2>
+                            color = "#1b9e77") +       # <2>
   theme_bw() +
   theme(title = element_blank())
 ```
+
+1.  Memvisualisasikan `dist_boot_videoYt` dan ditambah dengan
+2.  arsiran selang kepercayaan yang ujung-ujungnya diambil dari objek `sk_persentil` dan warnanya #1b9e77.
 
 ### Metode Kurva Normal
 
 Ujung-ujung selang kepercayaan 95% berdasarkan model matematis distribusi normal dapat ditentukan dengan kode berikut.
 
 ```{r}
-z_bintang <- qnorm(0.975, mean = 0,
-                   sd = 1, lower.tail = TRUE)
-pias_galat <- z_bintang * SE
-sk_bawah_matematis <- mu - pias_galat
-sk_atas_matematis <- mu + pias_galat
-sk_matematis <- tibble(
-  batas_bawah = sk_bawah_matematis,
-  batas_atas = sk_atas_matematis)
-print(sk_matematis)
+z_bintang <- qnorm(0.975, mean = 0,           # <1>
+                   sd = 1, lower.tail = TRUE) # <1>
+pias_galat <- z_bintang * SE                  # <2>
+sk_bawah_matematis <- mu - pias_galat         # <3>
+sk_atas_matematis <- mu + pias_galat          # <4>
+sk_matematis <- tibble(                       # <5>
+  batas_bawah = sk_bawah_matematis,           # <5>
+  batas_atas = sk_atas_matematis)             # <5>
+print(sk_matematis)                           # <6>
 ```
+
+1.  
 
 Dengan demikian, selang kepercayaan yang kita peroleh adalah (`r round(sk_bawah_matematis *100, 2)`%, `r round(sk_atas_matematis * 100, 2)`%).
 
