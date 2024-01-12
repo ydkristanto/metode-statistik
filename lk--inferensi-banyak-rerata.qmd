@@ -9,6 +9,7 @@ author:
     url: https://people.usd.ac.id/~ydkristanto/
     affiliation: Pendidikan Matematika, Universitas Sanata Dharma, Yogyakarta
     affiliation-url: https://www.usd.ac.id/
+    orcid: 0000-0003-1446-0422
 language: _language-id.yml
 type: webpage
 container-title: "Catatan Kuliah STAT503 Metode Statistik"
@@ -92,7 +93,7 @@ sampel_buku <- tribble(
   'Teknologi',	1875.9,
   'Teknologi',	2023.8,
   'Teknologi',	1572.5,
-  'Teknologi',	1863.4,
+  'Teknologi',	1863.4
 )
 
 sampel_buku %>% 
@@ -124,14 +125,16 @@ Untuk lebih mengenal data `sampel_buku`, kita dapat memvisualisasikan distribusi
 
 ```{r}
 #| label: fig-violin-harga-buku
+#| warning: false
 #| fig-cap: Distribusi `harga` buku di setiap `kategori` dalam data `sampel_buku`.
 #| fig-asp: 0.5625
 
 sampel_buku %>% 
   ggplot(aes(x = kategori, y = harga,
              color = kategori)) +
-  geom_violin() +
-  stat_summary(fun = "mean") +
+  geom_violin(width = .75) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "pointrange",
+               size = 1, linewidth = 1) +
   theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.text.x = element_blank(),

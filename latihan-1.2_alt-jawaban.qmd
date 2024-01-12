@@ -27,8 +27,6 @@ library(knitr)
 library(infer)
 ```
 
-![](https://images.unsplash.com/photo-1542810634-71277d95dcbb){fig-alt="Kredit untuk gambar ini diberikan kepada Yanis H dan Unsplash.com."}
-
 # Latihan 1.2
 
 **Calon pendidik Matematika.** Misalkan Anda ingin mengetahui berapa persen mahasiswa di program studi Pendidikan Matematika yang benar-benar bercita-cita menjadi pendidik Matematika. Untuk itu, Anda menyebarkan sebuah survei yang salah satu pertanyaannya seperti ini.
