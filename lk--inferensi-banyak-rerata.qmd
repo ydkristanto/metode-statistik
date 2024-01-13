@@ -134,7 +134,10 @@ Untuk lebih mengenal data `sampel_buku`, kita dapat memvisualisasikan distribusi
 sampel_buku %>% 
   ggplot(aes(x = kategori, y = harga)) +
   geom_violin(aes(fill = kategori),
-              width = .5, alpha = .3) +
+              width = .5, alpha = .2) +
+  geom_sina(aes(col = kategori),
+            size = 3, alpha = .6,
+            maxwidth = .5) +
   stat_summary(fun.data = "mean_cl_boot",
                geom = "crossbar",
                width = .5) +
