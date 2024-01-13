@@ -697,7 +697,7 @@ Penting juga bagi kita untuk dapat melaporkan uji ANOVA dan uji perbandingan ber
 Terdapat perbedaan yang signifikan terhadap harga buku antar kategorinya seperti yang telah ditentukan oleh ANOVA (*F* = 9,646; *p* \< 0,001). Uji perbandingan berganda Tukey menemukan perbedaan yang signifikan terhadap rerata harga buku pada kategori Ilmu Kesehatan dan Hukum (195,31 ± 189,59 ribu rupiah; *p* = 0,043), serta Teknologi dan Hukum (334,28 ± 189,59 ribu rupiah; *p* \< 0,001). Akan tetapi, tidak ditemukan perbedaan yang signifikan antara kategori Teknologi dan Ilmu Kesehatan (p = 0,183).
 :::
 
-# Uji Nonparametrik Alternatif
+# Metode-Metode Alternatif
 
 Uji ANOVA memiliki alternatif, yaitu uji Kruskal-Wallis. Berbeda dengan ANOVA, uji Kruskal-Wallis tidak mempersyaratkan normalitas dan homogenitas variansinya. Uji Kruskal-Wallis ini hanya mempersyaratkan bahwa observasi-observasi dalam sampelnya bebas [selengkapnya baca @Kristanto2021b, pp. 241-248].
 
