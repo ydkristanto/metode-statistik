@@ -2,7 +2,7 @@
 title: "Inferensi untuk Membandingkan Banyak Rerata"
 subtitle: "Menggunakan *Analysis of Variance* (ANOVA) untuk Membandingkan Rerata"
 abstract: |
-  Banyak permasalahan statistik yang bertujuan untuk membandingkan tiga atau lebih rerata populasi ketika diketahui rerata sampelnya. Artikel ini bertujuan untuk mendemonstrasikan penggunaan uji ANOVA untuk membandingkan banyak rerata serta memberikan penjelasan logika di balik metode statistik tersebut secara ringkas, termasuk dengan demonstrasi pemeriksaan kondisi-kondisi atau asumsi-asumsi yang diperlukan sebelum melakukan uji ANOVA tersebut. Artikel ini juga menjelaskan bagaimana melakukan uji perbandingan berganda Tukey yang digunakan untuk mendeteksi pasangan rerata mana yang berbeda. Selain itu, uji Kruskal-Wallis dan uji Dunn yang merupakan alternatif dari uji ANOVA dan perbandingan berganda Tukey juga dijelaskan secara singkat dan didemonstrasikan dalam artikel ini. Semua uji hipotesis tersebut didemonstrasikan dengan menggunakan pemrograman R.
+  Banyak permasalahan statistik yang bertujuan untuk membandingkan tiga atau lebih rerata populasi ketika diketahui rerata sampelnya. Artikel ini bertujuan untuk mendemonstrasikan penggunaan uji ANOVA untuk membandingkan banyak rerata serta memberikan penjelasan logika di balik metode statistik tersebut secara ringkas, termasuk dengan demonstrasi pemeriksaan kondisi-kondisi atau asumsi-asumsi statistik yang diperlukan sebelum melakukan uji ANOVA tersebut. Artikel ini juga menjelaskan bagaimana melakukan uji perbandingan berganda Tukey yang digunakan untuk mendeteksi pasangan rerata mana yang secara signifikan berbeda. Selain itu, uji Kruskal-Wallis dan uji Dunn yang merupakan alternatif dari uji ANOVA dan perbandingan berganda Tukey juga dijelaskan secara singkat dan didemonstrasikan dalam artikel ini. Semua uji hipotesis tersebut didemonstrasikan dengan menggunakan pemrograman R.
 date: 2023/11/28
 author:
   - name: Yosep Dwi Kristanto
@@ -35,6 +35,7 @@ google-scholar: true
 
 ```{r}
 #| label: pengaturan
+#| message: false
 
 library(tidyverse)
 library(knitr)
@@ -42,6 +43,7 @@ library(kableExtra)
 library(infer)
 library(ggpubr)
 library(rstatix)
+library(ggforce)
 ```
 
 # Harga Buku
@@ -130,16 +132,18 @@ Untuk lebih mengenal data `sampel_buku`, kita dapat memvisualisasikan distribusi
 #| fig-asp: 0.5625
 
 sampel_buku %>% 
-  ggplot(aes(x = kategori, y = harga,
-             color = kategori)) +
-  geom_violin(width = .75) +
-  stat_summary(fun.data = "mean_cl_boot", geom = "pointrange",
-               size = 1, linewidth = 1) +
+  ggplot(aes(x = kategori, y = harga)) +
+  geom_violin(aes(fill = kategori),
+              width = .5, alpha = .3) +
+  stat_summary(fun.data = "mean_cl_boot",
+               geom = "crossbar",
+               width = .5) +
+  stat_summary(fun = "mean", geom = "point",
+               size = 5, col = "darkred") +
   theme_bw() +
-  theme(axis.title.x = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        legend.position = "bottom")
+  scale_fill_brewer(palette = "Dark2") +
+  scale_color_brewer(palette = "Dark2") +
+  theme(legend.position = "none")
 ```
 
 Untuk menguji dugaan di awal, kita asumsikan dulu bahwa rerata `harga` semua buku di kategori-kategori tersebut sama. Saya tekankan, asumsi tersebut melibatkan rerata populasi. Asumsi inilah yang disebut dengan hipotesis nol atau $H_0$.
@@ -457,7 +461,8 @@ sampel_buku %>%
            ggtheme = theme_bw(),
            xlab = "Teoretis",
            ylab = "Sampel") +
-  scale_color_brewer(palette = "Dark2")
+  scale_color_brewer(palette = "Dark2") +
+  theme(legend.position = "bottom")
 ```
 
 Berdasarkan @fig-QQ-kategori-buku tersebut, kita dapat mengasumsikan bahwa data `harga` buku di setiap `kategori`-nya berasal dari populasi yang berdistribusi normal. Kesimpulan ini dapat didukung oleh hasil uji Shapiro-Wilk seperti yang ditunjukkan pada @tbl-hasil-Shapiro-Wilk-harga-buku. Uji Shapiro-Wilk tersebut menggunakan fungsi `shapiro_test()` yang merupakan bagian dari paket {rstatix}.
@@ -490,7 +495,8 @@ Untuk memeriksa tentang homogenitas variansi, kita gunakan boxplot dari `harga` 
 
 sampel_buku %>% 
   ggplot(aes(x = kategori, y = harga)) +
-  geom_boxplot(aes(color = kategori)) +
+  geom_boxplot(aes(fill = kategori),
+               alpha = .6) +
   theme_bw() +
   scale_color_brewer(palette = "Dark2") +
   theme(legend.position = "none")
@@ -591,7 +597,8 @@ Salah satu uji hipotesis pasca-ANOVA yang umum digunakan adalah uji perbandingan
 ```{r}
 #| code-fold: false
 
-TukeyHSD(ANOVA_buku)
+tukey_sampel_buku <- TukeyHSD(ANOVA_buku)
+print(tukey_sampel_buku)
 
 ```
 
@@ -601,6 +608,90 @@ Berdasarkan uji perbandingan berganda Tukey tersebut, kita dapat menyimpulkan ba
 ### Hati-Hati! {.unnumbered .unlisted}
 
 Ketika hipotesis nol dalam uji ANOVA ditolak, mungkin Anda bertanya-tanya mengapa kita perlu menggunakan uji perbandingan berganda? Anda mungkin juga berpikir bahwa akan lebih mudah jika kita menggunakan uji $t$ (atau uji nonparametrik alternatifnya) pada setiap pasangannya. Jangan keliru, cara seperti ini akan meningkatkan galat jenis pertamanya (yaitu kekeliruan menolak hipotesis nol ketika hipotesis tersebut benar) karena setiap uji $t$ yang kita lakukan bersesuaian dengan galat jenis pertama atau $\alpha$. Sebaliknya, kita perlu menggunakan uji perbandingan berganda karena galat jenis pertama uji ini sifatnya 'sepaket', berapapun pasangan yang kita bandingkan.
+:::
+
+# Ringkasan dan Pelaporan ANOVA
+
+Berdasarkan uji ANOVA pada `sampel_buku` kita memperoleh statistik $F$ yang kurang lebih sebesar `r round(F_buku, 3)` dan nilai-*P* yang sekitar `r round(P_buku, 5)`. Dengan uji perbandingan berganda Tukey kita dapat mengidentifikasi pasangan `kategori` mana saja yang memiliki perbedaan rerata `harga` secara signifikan. Pasangan tersebut adalah Ilmu Kesehatan-Hukum dan Teknologi-Hukum.
+
+*A picture is worth a thousand words!* Kita dapat meringkas hasil uji ANOVA dan uji perbandingan berganda Tukey tersebut dengan menggunakan sebuah gambar. Salah satu kemungkinan gambarnya disajikan pada @fig-hasil-anova-Tukey.[^2]
+
+[^2]: Kemungkinan lainnya adalah dengan menggunakan fungsi `ggbetweenstats()` yang disediakan oleh paket {ggstatsplot}. Paket tersebut merupakan ekstensi paket {ggplot2}.
+
+```{r}
+#| label: fig-hasil-anova-Tukey
+#| fig-cap: Hasil uji ANOVA dan uji perbandingan berganda Tukey terhadap `harga` buku pada masing-masing `kategori`-nya.
+#| fig-asp: 0.5625
+
+viol_sampel_buku <- sampel_buku %>% 
+  ggplot(aes(x = kategori, y = harga)) +
+  geom_violin(aes(fill = kategori),
+              width = .5,
+              alpha = .2) +
+  geom_sina(aes(color = kategori), maxwidth = .5,
+            size = 3,
+            alpha = .6) +
+  theme_bw() +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_color_brewer(palette = "Dark2") +
+  theme(legend.position = "none")
+
+viol_hasil_sampel_buku <- viol_sampel_buku +
+  stat_summary(fun.data = "mean_cl_normal", 
+               geom = "crossbar", width = 0.2) +
+  stat_summary(fun = mean,
+               geom = "point",
+               size = 5,
+               col = "darkred") +
+  annotate(geom = "segment",
+           x = c(1, 2),
+           y = 2419 + 45,
+           xend = c(1, 2),
+           yend = 2419 + 2 * 45) +
+  annotate(geom = "segment",
+           x = 1,
+           y = 2419 + 2 * 45,
+           xend = 2,
+           yend = 2419 + 2 * 45) +
+  annotate(geom = "text",
+           x = 1.5, y = 2419 + 2.25 * 45,
+           label = "*") +
+  annotate(geom = "segment",
+           x = c(1, 3),
+           y = 2419 + 3 * 45,
+           xend = c(1, 3),
+           yend = 2419 + 4 * 45) +
+  annotate(geom = "segment",
+           x = 1,
+           y = 2419 + 4 * 45,
+           xend = 3,
+           yend = 2419 + 4 * 45) +
+  annotate(geom = "text",
+           x = 2, y = 2419 + 4.25 * 45,
+           label = "***") +
+  annotate(geom = "segment",
+           x = c(2, 3),
+           y = 2419 + 5 * 45,
+           xend = c(2, 3),
+           yend = 2419 + 6 * 45) +
+  annotate(geom = "segment",
+           x = 2,
+           y = 2419 + 6 * 45,
+           xend = 3,
+           yend = 2419 + 6 * 45) +
+  annotate(geom = "text",
+           x = 2.5, y = 2419 + 6.75 * 45,
+           label = "ns") +
+  labs(subtitle = "ANOVA: F(2, 27) = 9,646; p = 0,00069",
+       x = "Kategori buku",
+       y = "Harga buku (dalam ribuan rupiah)")
+viol_hasil_sampel_buku
+```
+
+Penting juga bagi kita untuk dapat melaporkan uji ANOVA dan uji perbandingan berganda Tukey tersebut secara jelas. Salah satu panduan yang dapat kita gunakan untuk melaporkan hasil kedua uji tersebut adalah panduannya APA (*American Psychological Association*) [-@apa2022]. Berikut ini adalah contoh pelaporan uji-uji statistik yang telah kita lakukan.
+
+::: {.callout-note appearance="minimal"}
+Terdapat perbedaan yang signifikan terhadap harga buku antar kategorinya seperti yang telah ditentukan oleh ANOVA (*F* = 9,646; *p* \< 0,001). Uji perbandingan berganda Tukey menemukan perbedaan yang signifikan terhadap rerata harga buku pada kategori Ilmu Kesehatan dan Hukum (195,31 ± 189,59 ribu rupiah; *p* = 0,043), serta Teknologi dan Hukum (334,28 ± 189,59 ribu rupiah; *p* \< 0,001). Akan tetapi, tidak ditemukan perbedaan yang signifikan antara kategori Teknologi dan Ilmu Kesehatan (p = 0,183).
 :::
 
 # Uji Nonparametrik Alternatif
